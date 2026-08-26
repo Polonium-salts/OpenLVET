@@ -1,28 +1,15 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# asdf version management
-.tool-versions
-
-node_modules
-.cursorignore
+# Turborepo
 .turbo
 
+# Env vars
 .env*
-!*.env.example
+!.env.example
 
-# cursor
-bun.lockb
+.next/
 
-# content-collections
-.content-collections
+.font-cache/
 
-# Twiggy
-.cursor/
+next-env.d.ts
 
-.open-next
-
-target/
-
-.cargo-tools/
-
-rust-migration-notes.md
+*.tsbuildinfo
+node_modules

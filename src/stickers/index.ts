@@ -128,7 +128,9 @@ export async function searchStickers({
 		});
 	}
 
-	const providers = stickersRegistry.getAll();
+	const providers = stickersRegistry
+		.getAll()
+		.filter((p) => p.id in STICKER_CATEGORIES && p.id !== "all");
 	if (providers.length === 0) {
 		return {
 			items: [],
@@ -168,7 +170,9 @@ export async function searchAll({
 }): Promise<StickerBrowseResult> {
 	registerDefaultStickerProviders({});
 
-	const providers = stickersRegistry.getAll();
+	const providers = stickersRegistry
+		.getAll()
+		.filter((p) => p.id in STICKER_CATEGORIES && p.id !== "all");
 	if (providers.length === 0) {
 		return { sections: [] };
 	}
@@ -243,15 +247,19 @@ export async function browseAll({
 	if (recentItems.length > 0) {
 		sections.push({
 			id: "recent",
-			title: "Recently used",
+			title: "最近使用",
 			items: recentItems.slice(0, limit),
 			hasMore: recentItems.length > limit,
 			layout: "row",
 		});
 	}
 
+	const categoryProviders = stickersRegistry
+		.getAll()
+		.filter((p) => p.id in STICKER_CATEGORIES && p.id !== "all");
+
 	const settledResults = await Promise.allSettled(
-		stickersRegistry.getAll().map(async (provider) => {
+		categoryProviders.map(async (provider) => {
 			const browseResult = await provider.browse({
 				options: { limit },
 			});
@@ -262,17 +270,17 @@ export async function browseAll({
 			}
 
 			const category = provider.id as StickerCategory;
-		return {
-			...firstSection,
-			id: category,
-			title: STICKER_CATEGORIES[category] ?? firstSection.title,
-			layout: "row" as const,
-			action: {
-				type: "see-all" as const,
-				category,
-				sectionId: firstSection.id,
-			},
-		};
+			return {
+				...firstSection,
+				id: category,
+				title: STICKER_CATEGORIES[category] ?? firstSection.title,
+				layout: "row" as const,
+				action: {
+					type: "see-all" as const,
+					category,
+					sectionId: firstSection.id,
+				},
+			};
 		}),
 	);
 

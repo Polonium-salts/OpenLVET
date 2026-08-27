@@ -31,6 +31,7 @@ import type { TimelineDragData } from "@/timeline/drag";
 import type { MediaAsset } from "@/media/types";
 import type { ProcessedMediaAsset } from "@/media/processing";
 import { roundFrameTime, type MediaTime } from "@/wasm";
+import { useStockStore } from "@/stock/stock-store";
 
 // --- Config ---
 
@@ -97,6 +98,7 @@ function elementTypeFromDrag({
 		case "effect":
 			return "effect";
 		case "media":
+		case "stock":
 			return dragData.mediaType;
 	}
 }
@@ -107,7 +109,7 @@ function getTargetElementTypesForDrag({
 	dragData: TimelineDragData;
 }): string[] | undefined {
 	if (dragData.type === "effect") return dragData.targetElementTypes;
-	if (dragData.type === "media") return dragData.targetElementTypes;
+	if (dragData.type === "media" || dragData.type === "stock") return dragData.targetElementTypes;
 	return undefined;
 }
 
@@ -118,9 +120,15 @@ function getDurationForDrag({
 	dragData: TimelineDragData;
 	mediaAssets: MediaAsset[];
 }): MediaTime {
-	if (dragData.type !== "media") return DEFAULT_NEW_ELEMENT_DURATION;
-	const media = mediaAssets.find((asset) => asset.id === dragData.id);
-	return toElementDurationTicks({ seconds: media?.duration });
+	if (dragData.type === "media") {
+		const media = mediaAssets.find((asset) => asset.id === dragData.id);
+		return toElementDurationTicks({ seconds: media?.duration });
+	}
+	if (dragData.type === "stock") {
+		const stockItem = useStockStore.getState().getItem(dragData.stockId);
+		return toElementDurationTicks({ seconds: stockItem?.duration });
+	}
+	return DEFAULT_NEW_ELEMENT_DURATION;
 }
 
 function orderedTracks({
@@ -374,6 +382,9 @@ export class DragDropController {
 			case "media":
 				this.executeMediaDrop({ target, dragData });
 				return;
+			case "stock":
+				this.executeStockDrop({ target, dragData });
+				return;
 		}
 	}
 
@@ -387,7 +398,10 @@ export class DragDropController {
 		const element = buildTextElement({
 			raw: {
 				name: dragData.name ?? "",
-				params: { content: dragData.content ?? "" },
+				params: {
+					content: dragData.content ?? "",
+					...(dragData.params ?? {}),
+				},
 			},
 			startTime: target.xPosition,
 		});
@@ -441,6 +455,55 @@ export class DragDropController {
 			.getMediaAssets()
 			.find((asset) => asset.id === dragData.id);
 		if (!mediaAsset) return;
+
+		const trackType: TrackType =
+			dragData.mediaType === "audio" ? "audio" : "video";
+		const element = buildElementFromMedia({
+			mediaId: mediaAsset.id,
+			mediaType: mediaAsset.type,
+			name: mediaAsset.name,
+			duration: toElementDurationTicks({ seconds: mediaAsset.duration }),
+			startTime: target.xPosition,
+		});
+		this.insertAtTarget({ element, target, trackType });
+	}
+
+	private async executeStockDrop({
+		target,
+		dragData,
+	}: {
+		target: DropTarget;
+		dragData: Extract<TimelineDragData, { type: "stock" }>;
+	}): Promise<void> {
+		const stockItem = useStockStore.getState().getItem(dragData.stockId);
+		if (!stockItem) return;
+
+		const projectId = this.config.getActiveProjectId();
+		if (!projectId) return;
+
+		let mediaAsset = this.config
+			.getMediaAssets()
+			.find((asset) => asset.name === stockItem.name && asset.file?.size === stockItem.size);
+
+		if (!mediaAsset) {
+			const created = await this.config.addMediaAsset({
+				projectId,
+				asset: {
+					name: stockItem.name,
+					type: stockItem.type,
+					file: stockItem.file,
+					url: stockItem.url,
+					thumbnailUrl: stockItem.thumbnailUrl,
+					duration: stockItem.duration,
+					width: stockItem.width,
+					height: stockItem.height,
+					fps: stockItem.fps,
+					hasAudio: stockItem.hasAudio,
+				},
+			});
+			if (!created) return;
+			mediaAsset = created;
+		}
 
 		const trackType: TrackType =
 			dragData.mediaType === "audio" ? "audio" : "video";

@@ -82,6 +82,59 @@ async function generateImageThumbnail({
 	});
 }
 
+async function generateVideoThumbnailFallback({
+	videoFile,
+}: {
+	videoFile: File;
+}): Promise<{ thumbnailUrl: string; width: number; height: number; duration: number } | null> {
+	return new Promise((resolve) => {
+		const video = document.createElement("video");
+		const objectUrl = URL.createObjectURL(videoFile);
+		video.src = objectUrl;
+		video.muted = true;
+		video.playsInline = true;
+		video.preload = "auto";
+		video.currentTime = 0.5;
+
+		const cleanup = () => {
+			URL.revokeObjectURL(objectUrl);
+			video.remove();
+		};
+
+		video.onloadeddata = () => {
+			try {
+				const canvas = document.createElement("canvas");
+				const width = video.videoWidth || 320;
+				const height = video.videoHeight || 180;
+				canvas.width = width;
+				canvas.height = height;
+				const ctx = canvas.getContext("2d");
+				if (ctx) {
+					ctx.drawImage(video, 0, 0, width, height);
+					const thumbnailUrl = canvas.toDataURL("image/jpeg", 0.8);
+					resolve({
+						thumbnailUrl,
+						width,
+						height,
+						duration: video.duration || 0,
+					});
+				} else {
+					resolve(null);
+				}
+			} catch {
+				resolve(null);
+			} finally {
+				cleanup();
+			}
+		};
+
+		video.onerror = () => {
+			cleanup();
+			resolve(null);
+		};
+	});
+}
+
 export async function processMediaAssets({
 	files,
 	onProgress,
@@ -141,7 +194,15 @@ export async function processMediaAssets({
 						? Math.round(videoData.fps)
 						: undefined;
 					hasAudio = videoData.hasAudio;
-					thumbnailUrl = videoData.thumbnailUrl ?? undefined;
+					if (!thumbnailUrl) {
+						const fallback = await generateVideoThumbnailFallback({ videoFile: file });
+						if (fallback) {
+							thumbnailUrl = fallback.thumbnailUrl;
+							if (!width) width = fallback.width;
+							if (!height) height = fallback.height;
+							if (!duration) duration = fallback.duration;
+						}
+					}
 
 					if (!videoData.canDecode) {
 						toast.error(`Can't preview ${file.name}`, {
@@ -151,14 +212,23 @@ export async function processMediaAssets({
 						});
 					}
 				} catch (error) {
-					const message =
-						error instanceof Error
-							? error.message
-							: "Could not process video";
+					// If mediabunny throws, fallback to video element thumbnail
+					const fallback = await generateVideoThumbnailFallback({ videoFile: file });
+					if (fallback) {
+						thumbnailUrl = fallback.thumbnailUrl;
+						width = fallback.width;
+						height = fallback.height;
+						duration = fallback.duration;
+					} else {
+						const message =
+							error instanceof Error
+								? error.message
+								: "Could not process video";
 
-					toast.error(`Couldn't process ${file.name}`, {
-						description: message,
-					});
+						toast.error(`Couldn't process ${file.name}`, {
+							description: message,
+						});
+					}
 				}
 			} else if (fileType === "audio") {
 				duration = await getMediaDuration({ file });

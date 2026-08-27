@@ -39,7 +39,7 @@ import {
 	InformationCircleIcon,
 	ClosedCaptionIcon,
 	Film01Icon,
-	HeadphonesIcon,
+	TextIcon,
 	SlidersHorizontalIcon,
 	ScissorIcon,
 	PlayIcon,
@@ -163,7 +163,7 @@ function ProjectsHeader() {
 					<div className="flex size-9 items-center justify-center rounded-lg bg-linear-270 from-[#2567EC] to-[#37B6F7] shadow-sm shadow-blue-500/20">
 						<Image
 							src={DEFAULT_LOGO_URL}
-							alt="OpenCut Logo"
+							alt="OpenLVET Logo"
 							width={22}
 							height={22}
 							className="invert brightness-200"
@@ -171,7 +171,7 @@ function ProjectsHeader() {
 					</div>
 					<div className="flex flex-col">
 						<div className="flex items-center gap-2">
-							<span className="font-semibold text-base tracking-tight">OpenCut</span>
+							<span className="font-semibold text-base tracking-tight">OpenLVET</span>
 							<span className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
 								剪映版
 							</span>
@@ -258,11 +258,11 @@ function HeroCreationSection() {
 						onClick={() => handleCreateProject("stock")}
 					/>
 					<QuickToolCard
-						icon={HeadphonesIcon}
-						title="音效配乐"
-						desc="流行音效与环境音效库"
-						badge="丰富音源"
-						onClick={() => handleCreateProject("sounds")}
+						icon={TextIcon}
+						title="文本花字"
+						desc="精美综艺花字与电影标题"
+						badge="海量模板"
+						onClick={() => handleCreateProject("text")}
 					/>
 					<QuickToolCard
 						icon={SlidersHorizontalIcon}

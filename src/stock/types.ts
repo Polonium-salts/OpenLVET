@@ -1,40 +1,39 @@
-export type StockMediaType = "all" | "video" | "photo" | "illustration" | "vector";
-
-export type StockOrientation = "all" | "horizontal" | "vertical";
-
-export type StockSortOrder = "popular" | "latest";
+export type StockMediaType = "all" | "video" | "image" | "audio";
+export type StockSortKey = "name" | "date" | "size" | "duration";
+export type StockSortOrder = "asc" | "desc";
 
 export interface StockItem {
-	id: number | string;
-	type: "video" | "image";
-	subType: "video" | "photo" | "illustration" | "vector";
-	title: string;
+	id: string;
+	name: string;
+	type: "video" | "image" | "audio";
 	tags: string[];
-	duration?: number; // duration in seconds for video
-	previewUrl: string;
-	downloadUrl: string;
-	thumbnailUrl: string;
-	width: number;
-	height: number;
-	aspectRatio: number;
-	author: string;
-	authorAvatar?: string;
-	views?: number;
-	downloads?: number;
-	likes?: number;
-	pageUrl?: string;
-	videoQuality?: "4K" | "HD" | "SD";
+	file: File;
+	url: string;
+	thumbnailUrl?: string;
+	duration?: number; // seconds
+	width?: number;
+	height?: number;
+	fps?: number;
+	hasAudio?: boolean;
+	size: number;
+	isFavorite?: boolean;
+	createdAt: string;
+	updatedAt: string;
 }
 
-export interface StockSearchResponse {
-	total: number;
-	totalHits: number;
-	hits: StockItem[];
-	page: number;
-	pageSize: number;
-	hasMore: boolean;
-}
-
-export interface SavedStockItem extends StockItem {
-	savedAt: string;
+export interface StockMetadata {
+	id: string;
+	name: string;
+	type: "video" | "image" | "audio";
+	tags: string[];
+	thumbnailUrl?: string;
+	duration?: number;
+	width?: number;
+	height?: number;
+	fps?: number;
+	hasAudio?: boolean;
+	size: number;
+	isFavorite?: boolean;
+	createdAt: string;
+	updatedAt: string;
 }

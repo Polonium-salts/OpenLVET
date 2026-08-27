@@ -224,7 +224,8 @@ export class TimelineManager {
 			return null;
 		}
 
-		return findTrackInSceneTracks({ tracks: activeScene.tracks, trackId });
+		const tracks = this.previewTracks ?? activeScene.tracks;
+		return findTrackInSceneTracks({ tracks, trackId });
 	}
 
 	getElementsWithTracks({
@@ -903,21 +904,23 @@ export class TimelineManager {
 			return null;
 		}
 
+		const tracks = this.previewTracks ?? activeScene.tracks;
+
 		if (
-			activeScene.tracks.main.elements.some(
+			tracks.main.elements.some(
 				(element) => element.id === elementId,
 			)
 		) {
-			return activeScene.tracks.main.id;
+			return tracks.main.id;
 		}
 
-		for (const track of activeScene.tracks.overlay) {
+		for (const track of tracks.overlay) {
 			if (track.elements.some((element) => element.id === elementId)) {
 				return track.id;
 			}
 		}
 
-		for (const track of activeScene.tracks.audio) {
+		for (const track of tracks.audio) {
 			if (track.elements.some((element) => element.id === elementId)) {
 				return track.id;
 			}

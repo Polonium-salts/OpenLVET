@@ -3,11 +3,27 @@ import type { StickerProvider } from "@/stickers/types";
 import { flagsProvider } from "./flags";
 import { logosProvider } from "./logos";
 import { shapesProvider } from "./shapes";
+import {
+	bilibiliBaseProvider,
+	bilibiliTrendingProvider,
+	bilibiliYellowFaceProvider,
+	bilibiliGirlsProvider,
+	bilibiliMoePetProvider,
+	bilibiliAnimeProvider,
+	bilibiliMemeProvider,
+} from "./bilibili";
 
 const defaultProviders: StickerProvider[] = [
-	logosProvider,
-	flagsProvider,
+	bilibiliBaseProvider,
+	bilibiliTrendingProvider,
+	bilibiliYellowFaceProvider,
+	bilibiliGirlsProvider,
+	bilibiliMoePetProvider,
+	bilibiliAnimeProvider,
+	bilibiliMemeProvider,
 	shapesProvider,
+	flagsProvider,
+	logosProvider,
 ];
 
 export function registerDefaultStickerProviders({
@@ -19,6 +35,9 @@ export function registerDefaultStickerProviders({
 		if (stickersRegistry.has(provider.id)) {
 			continue;
 		}
-		stickersRegistry.register(provider.id, provider);
+		stickersRegistry.register({
+			key: provider.id,
+			definition: provider,
+		});
 	}
 }

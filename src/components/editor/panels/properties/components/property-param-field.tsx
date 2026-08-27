@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type {
 	ParamDefinition,
 	NumberParamDefinition,
@@ -138,26 +139,104 @@ function ParamInput({
 
 	if (param.type === "text") {
 		return (
-			<Textarea
-				value={String(value)}
-				onChange={(event) => onPreview(event.currentTarget.value)}
-				onBlur={onCommit}
+			<TextParamField
+				value={value}
+				onPreview={onPreview}
+				onCommit={onCommit}
 			/>
 		);
 	}
 
 	if (param.type === "font") {
 		return (
-			<input
-				className="border-input bg-accent h-9 w-full rounded-md border px-3 text-sm outline-none"
-				value={String(value)}
-				onChange={(event) => onPreview(event.currentTarget.value)}
-				onBlur={onCommit}
+			<FontParamField
+				value={value}
+				onPreview={onPreview}
+				onCommit={onCommit}
 			/>
 		);
 	}
 
 	return null;
+}
+
+function TextParamField({
+	value,
+	onPreview,
+	onCommit,
+}: {
+	value: ParamValue;
+	onPreview: (value: ParamValue) => void;
+	onCommit: () => void;
+}) {
+	const stringValue = typeof value === "string" ? value : String(value ?? "");
+	const [draft, setDraft] = useState(stringValue);
+	const [isFocused, setIsFocused] = useState(false);
+
+	useEffect(() => {
+		if (!isFocused) {
+			setDraft(stringValue);
+		}
+	}, [stringValue, isFocused]);
+
+	return (
+		<Textarea
+			value={isFocused ? draft : stringValue}
+			onFocus={() => {
+				setIsFocused(true);
+				setDraft(stringValue);
+			}}
+			onChange={(event) => {
+				const nextValue = event.currentTarget.value;
+				setDraft(nextValue);
+				onPreview(nextValue);
+			}}
+			onBlur={() => {
+				setIsFocused(false);
+				onCommit();
+			}}
+		/>
+	);
+}
+
+function FontParamField({
+	value,
+	onPreview,
+	onCommit,
+}: {
+	value: ParamValue;
+	onPreview: (value: ParamValue) => void;
+	onCommit: () => void;
+}) {
+	const stringValue = typeof value === "string" ? value : String(value ?? "");
+	const [draft, setDraft] = useState(stringValue);
+	const [isFocused, setIsFocused] = useState(false);
+
+	useEffect(() => {
+		if (!isFocused) {
+			setDraft(stringValue);
+		}
+	}, [stringValue, isFocused]);
+
+	return (
+		<input
+			className="border-input bg-accent h-9 w-full rounded-md border px-3 text-sm outline-none"
+			value={isFocused ? draft : stringValue}
+			onFocus={() => {
+				setIsFocused(true);
+				setDraft(stringValue);
+			}}
+			onChange={(event) => {
+				const nextValue = event.currentTarget.value;
+				setDraft(nextValue);
+				onPreview(nextValue);
+			}}
+			onBlur={() => {
+				setIsFocused(false);
+				onCommit();
+			}}
+		/>
+	);
 }
 
 function NumberParamField({

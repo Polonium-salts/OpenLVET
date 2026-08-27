@@ -12,9 +12,25 @@ export function resolveStickerId({
 }): string {
 	registerDefaultStickerProviders();
 
-	const parsedStickerId = parseStickerId({ stickerId });
-	return stickersRegistry.get(parsedStickerId.providerId).resolveUrl({
-		stickerId,
-		options,
-	});
+	try {
+		const parsedStickerId = parseStickerId({ stickerId });
+		if (stickersRegistry.has(parsedStickerId.providerId)) {
+			return stickersRegistry.get(parsedStickerId.providerId).resolveUrl({
+				stickerId,
+				options,
+			});
+		}
+		if (parsedStickerId.providerId === "bilibili") {
+			return decodeURIComponent(parsedStickerId.providerValue);
+		}
+	} catch {
+		if (
+			stickerId.startsWith("http://") ||
+			stickerId.startsWith("https://") ||
+			stickerId.startsWith("data:")
+		) {
+			return stickerId;
+		}
+	}
+	return "";
 }

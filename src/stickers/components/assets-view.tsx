@@ -28,6 +28,7 @@ import { useStickersStore } from "@/stickers/stickers-store";
 import { cn } from "@/utils/ui";
 import {
 	HappyIcon,
+	Search01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
@@ -52,23 +53,29 @@ export function StickersView() {
 	return (
 		<div className="flex h-full flex-col py-2">
 			<div className="px-2">
-				<Input
-					size="sm"
-					variant="default"
-					placeholder="Search..."
-					value={searchQuery}
-					onChange={(e) => {
-						setSearchQuery({ query: e.target.value });
-						void searchStickers({ query: e.target.value });
-					}}
-					showClearIcon
-					onClear={() => {
-						setSearchQuery({ query: "" });
-						void searchStickers({ query: "" });
-					}}
-					className="w-full"
-					containerClassName="w-full"
-				/>
+				<div className="relative">
+					<HugeiconsIcon
+						icon={Search01Icon}
+						className="text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 size-3.5"
+					/>
+					<Input
+						size="sm"
+						variant="default"
+						placeholder="搜索贴纸（小黄脸、2233娘、罗小黑、洛天依...）"
+						value={searchQuery}
+						onChange={(e) => {
+							setSearchQuery({ query: e.target.value });
+							void searchStickers({ query: e.target.value });
+						}}
+						showClearIcon
+						onClear={() => {
+							setSearchQuery({ query: "" });
+							void searchStickers({ query: "" });
+						}}
+						className="w-full pl-8.5 text-xs h-8 bg-muted/40"
+						containerClassName="w-full"
+					/>
+				</div>
 			</div>
 
 			<Tabs
@@ -79,14 +86,14 @@ export function StickersView() {
 				variant="underline"
 				className="mt-2 flex min-h-0 flex-1 flex-col"
 			>
-				<TabsList aria-label="Sticker categories">
+				<TabsList aria-label="Sticker categories" className="flex overflow-x-auto no-scrollbar w-full justify-start gap-1 px-2 border-b border-border/40 pb-1">
 					{Object.entries(STICKER_CATEGORIES).map(([key, label]) => (
-						<TabsTrigger key={key} value={key}>
+						<TabsTrigger key={key} value={key} className="shrink-0 text-xs px-2.5 py-1">
 							{label}
 						</TabsTrigger>
 					))}
 				</TabsList>
-				<div className="min-h-0 flex-1 overflow-y-auto px-4 pt-4">
+				<div className="min-h-0 flex-1 overflow-y-auto px-4 pt-3">
 					<StickersContentView />
 				</div>
 			</Tabs>
@@ -140,9 +147,9 @@ function EmptyView({ message }: { message: string }) {
 				icon={HappyIcon}
 				className="text-muted-foreground size-10"
 			/>
-			<div className="flex flex-col gap-2 text-center">
-				<p className="text-lg font-medium">No stickers found</p>
-				<p className="text-muted-foreground text-sm text-balance">{message}</p>
+			<div className="flex flex-col gap-1.5 text-center">
+				<p className="text-sm font-medium text-foreground">未找到相关贴纸</p>
+				<p className="text-muted-foreground text-xs text-balance">{message}</p>
 			</div>
 		</div>
 	);
@@ -150,7 +157,7 @@ function EmptyView({ message }: { message: string }) {
 
 function RegionBanner({ region }: { region: string }) {
 	return (
-		<div className="flex h-7 items-center gap-1.5 rounded-lg border border-sky-100 bg-sky-50 px-2">
+		<div className="flex h-7 items-center gap-1.5 rounded-lg border border-sky-100 bg-sky-50 px-2 dark:bg-sky-950/40 dark:border-sky-900">
 			<svg
 				width="12"
 				height="12"
@@ -160,13 +167,13 @@ function RegionBanner({ region }: { region: string }) {
 				strokeWidth="2"
 				strokeLinecap="round"
 				strokeLinejoin="round"
-				className="shrink-0 text-sky-600"
+				className="shrink-0 text-sky-600 dark:text-sky-400"
 				aria-hidden="true"
 			>
 				<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
 				<circle cx="12" cy="10" r="3" />
 			</svg>
-			<span className="text-xs font-semibold text-sky-600">{region}</span>
+			<span className="text-xs font-semibold text-sky-600 dark:text-sky-400">{region}</span>
 		</div>
 	);
 }
@@ -204,8 +211,8 @@ function StickersContentView() {
 				<div className="flex flex-col gap-3 pb-4">
 					{isRegionSearch && <RegionBanner region={regionLabel} />}
 					<div className="flex items-center justify-between">
-						<span className="text-muted-foreground text-sm">
-							{searchResults.total} results
+						<span className="text-muted-foreground text-xs">
+							找到 {searchResults.total} 个贴纸
 						</span>
 					</div>
 					<StickerGrid items={searchResults.items} />
@@ -215,7 +222,7 @@ function StickersContentView() {
 
 		// "all" tab search — sections are in browseContent, fall through to section rendering below
 		if (selectedCategory !== "all" && searchQuery) {
-			return <EmptyView message={`No stickers found for "${searchQuery}"`} />;
+			return <EmptyView message={`未找到与 "${searchQuery}" 相关的贴纸`} />;
 		}
 	}
 
@@ -228,15 +235,15 @@ function StickersContentView() {
 	}
 
 	if (!browseContent?.sections.length) {
-		const categoryLabel = STICKER_CATEGORIES[selectedCategory];
+		const categoryLabel = STICKER_CATEGORIES[selectedCategory] ?? selectedCategory;
 		return (
 			<EmptyView
 				message={
 					viewMode === "search"
-						? `No stickers found for "${searchQuery}"`
+						? `未找到与 "${searchQuery}" 相关的贴纸`
 						: selectedCategory === "all"
-							? "No stickers available yet."
-							: `No stickers available in ${categoryLabel.toLowerCase()} yet.`
+							? "暂无可用贴纸素材"
+							: `在「${categoryLabel}」分类下暂无可用贴纸`
 				}
 			/>
 		);
@@ -275,7 +282,7 @@ function StickerSection({
 			{hasHeader && (
 				<div className="flex items-center justify-between gap-2">
 					{section.title ? (
-						<p className="text-xs text-muted-foreground">{section.title}</p>
+						<p className="text-xs font-semibold text-muted-foreground">{section.title}</p>
 					) : (
 						<div />
 					)}
@@ -286,7 +293,7 @@ function StickerSection({
 								onClick={onClearRecent}
 								variant="text"
 								size="sm"
-								className="h-auto gap-1 p-0 text-xs text-muted-foreground"
+								className="h-auto gap-1 p-0 text-xs text-muted-foreground hover:text-foreground"
 							>
 								清空
 							</Button>
@@ -296,7 +303,7 @@ function StickerSection({
 							<Button
 								variant="text"
 								size="sm"
-								className="h-auto gap-1 p-0 text-xs text-primary"
+								className="h-auto gap-1 p-0 text-xs text-primary hover:underline"
 								onClick={() => {
 									onSeeAll(section.action?.category as StickerCategory);
 								}}
@@ -378,16 +385,17 @@ function StickerItem({
 			});
 
 			addToRecentStickers({ stickerId: item.id });
+			toast.success(`已添加贴纸「${item.name}」`);
 		} catch (error) {
 			console.error("Failed to add sticker:", error);
-			toast.error("Failed to add sticker to timeline");
+			toast.error("添加贴纸到时间线失败");
 		} finally {
 			setIsAdding(false);
 		}
 	};
 
 	const preview = (
-		<div className="flex size-full items-center justify-center p-3">
+		<div className="flex size-full items-center justify-center p-2.5 transition-transform hover:scale-105">
 			{hasImageError ? (
 				<span className="text-muted-foreground text-center text-xs break-all">
 					{displayName}
@@ -398,7 +406,7 @@ function StickerItem({
 					alt={displayName}
 					width={64}
 					height={64}
-					className="size-full object-contain"
+					className="size-full object-contain drop-shadow-sm"
 					style={
 						shouldCapSize
 							? {
@@ -410,6 +418,7 @@ function StickerItem({
 					onError={() => setHasImageError(true)}
 					loading="lazy"
 					unoptimized
+					referrerPolicy="no-referrer"
 				/>
 			)}
 		</div>
@@ -432,7 +441,7 @@ function StickerItem({
 
 	return (
 		<div
-			className={cn("relative", isAdding && "pointer-events-none opacity-50")}
+			className={cn("relative group", isAdding && "pointer-events-none opacity-50")}
 		>
 			<DraggableItem
 				name={displayName}

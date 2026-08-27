@@ -1,5 +1,5 @@
 {
-  "name": "@opencut/web",
+  "name": "openlvet",
   "version": "0.1.0",
   "private": true,
   "packageManager": "bun@1.2.18",
@@ -42,6 +42,8 @@
     "cmdk": "^1.0.0",
     "culori": "^4.0.2",
     "drizzle-orm": "^0.44.2",
+    "edge-tts": "^1.0.1",
+    "edge-tts-universal": "^1.4.0",
     "embla-carousel-react": "^8.5.1",
     "eventemitter3": "^5.0.1",
     "feed": "^5.1.0",

@@ -1,311 +1,238 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type {
-	SavedStockItem,
 	StockItem,
 	StockMediaType,
-	StockOrientation,
+	StockSortKey,
 	StockSortOrder,
 } from "./types";
+import { stockStorage } from "./stock-storage";
 import { toast } from "sonner";
 import { EditorCore } from "@/core";
 import { processMediaAssets } from "@/media/processing";
 import { buildElementFromMedia } from "@/timeline/element-utils";
-
-// In-memory query cache for instant 0ms responses
-const stockQueryCache = new Map<string, { hits: StockItem[]; hasMore: boolean }>();
-let activeFetchController: AbortController | null = null;
+import { generateUUID } from "@/utils/id";
+import { mediaTimeFromSeconds } from "@/wasm";
+import { DEFAULT_NEW_ELEMENT_DURATION } from "@/timeline/creation";
 
 interface StockStoreState {
-	searchQuery: string;
-	mediaType: StockMediaType;
-	category: string;
-	orientation: StockOrientation;
-	order: StockSortOrder;
-	page: number;
-	hasMore: boolean;
-	isLoading: boolean;
-	isLoadingMore: boolean;
-	isDemoFallback: boolean;
 	items: StockItem[];
-	savedItems: SavedStockItem[];
-	viewTab: "browse" | "saved";
-	apiKey: string;
+	mediaType: StockMediaType;
+	searchQuery: string;
+	sortKey: StockSortKey;
+	sortOrder: StockSortOrder;
+	viewMode: "grid" | "list";
+	isLoading: boolean;
+	isImporting: boolean;
+	importProgress: number;
 	previewItem: StockItem | null;
-	downloadingIds: Record<string | number, boolean>;
+	selectedItemIds: string[];
 
 	setSearchQuery: (query: string) => void;
 	setMediaType: (type: StockMediaType) => void;
-	setCategory: (category: string) => void;
-	setOrientation: (orientation: StockOrientation) => void;
-	setOrder: (order: StockSortOrder) => void;
-	setViewTab: (tab: "browse" | "saved") => void;
-	setApiKey: (key: string) => void;
+	setSort: (key: StockSortKey, order?: StockSortOrder) => void;
+	setViewMode: (mode: "grid" | "list") => void;
 	setPreviewItem: (item: StockItem | null) => void;
+	setSelectedItems: (ids: string[]) => void;
+	toggleSelectItem: (id: string) => void;
 
-	fetchStockItems: (resetPage?: boolean) => Promise<void>;
-	loadMore: () => Promise<void>;
-	toggleSaveItem: (item: StockItem) => void;
-	isItemSaved: (id: number | string) => boolean;
+	loadStockLibrary: () => Promise<void>;
+	importFiles: (files: FileList | File[]) => Promise<void>;
+	deleteItem: (id: string) => Promise<void>;
+	deleteSelectedItems: () => Promise<void>;
+	renameItem: (id: string, newName: string) => Promise<void>;
+	toggleFavorite: (id: string) => Promise<void>;
 
-	downloadStockBlob: (item: StockItem) => Promise<File | null>;
 	importStockToProject: (item: StockItem) => Promise<boolean>;
 	addStockToTimeline: (item: StockItem) => Promise<boolean>;
+	getItem: (id: string) => StockItem | undefined;
 }
 
 export const useStockStore = create<StockStoreState>()(
 	persist(
 		(set, get) => ({
-			searchQuery: "",
-			mediaType: "all",
-			category: "all",
-			orientation: "all",
-			order: "popular",
-			page: 1,
-			hasMore: true,
-			isLoading: false,
-			isLoadingMore: false,
-			isDemoFallback: false,
 			items: [],
-			savedItems: [],
-			viewTab: "browse",
-			apiKey: "",
+			mediaType: "all",
+			searchQuery: "",
+			sortKey: "date",
+			sortOrder: "desc",
+			viewMode: "grid",
+			isLoading: false,
+			isImporting: false,
+			importProgress: 0,
 			previewItem: null,
-			downloadingIds: {},
+			selectedItemIds: [],
 
 			setSearchQuery: (query) => set({ searchQuery: query }),
-			setMediaType: (type) => {
-				set({ mediaType: type });
-				get().fetchStockItems(true);
+			setMediaType: (type) => set({ mediaType: type }),
+			setSort: (key, order) => {
+				const currentOrder = get().sortOrder;
+				const newOrder = order ?? (get().sortKey === key ? (currentOrder === "asc" ? "desc" : "asc") : "desc");
+				set({ sortKey: key, sortOrder: newOrder });
 			},
-			setCategory: (category) => {
-				set({ category });
-				get().fetchStockItems(true);
-			},
-			setOrientation: (orientation) => {
-				set({ orientation });
-				get().fetchStockItems(true);
-			},
-			setOrder: (order) => {
-				set({ order });
-				get().fetchStockItems(true);
-			},
-			setViewTab: (tab) => set({ viewTab: tab }),
-			setApiKey: (key) => {
-				set({ apiKey: key });
-				stockQueryCache.clear();
-				get().fetchStockItems(true);
-			},
+			setViewMode: (mode) => set({ viewMode: mode }),
 			setPreviewItem: (item) => set({ previewItem: item }),
-
-			fetchStockItems: async (resetPage = false) => {
-				const state = get();
-				const targetPage = resetPage ? 1 : state.page;
-
-				// Cancel previous ongoing fetch to avoid race condition and save bandwidth
-				if (activeFetchController) {
-					activeFetchController.abort();
+			setSelectedItems: (ids) => set({ selectedItemIds: ids }),
+			toggleSelectItem: (id) => {
+				const { selectedItemIds } = get();
+				if (selectedItemIds.includes(id)) {
+					set({ selectedItemIds: selectedItemIds.filter((item) => item !== id) });
+				} else {
+					set({ selectedItemIds: [...selectedItemIds, id] });
 				}
-				activeFetchController = new AbortController();
-				const { signal } = activeFetchController;
+			},
 
-				// Generate cache key
-				const cacheKey = `${state.searchQuery.trim()}:${state.mediaType}:${state.category}:${state.orientation}:${state.order}:${targetPage}:${state.apiKey}`;
-
-				// Check cache for instant response
-				if (stockQueryCache.has(cacheKey)) {
-					const cached = stockQueryCache.get(cacheKey)!;
-					set({
-						items: cached.hits,
-						hasMore: cached.hasMore,
-						isLoading: false,
-						page: targetPage,
-					});
-					return;
-				}
-
-				set({ isLoading: true, page: targetPage });
-
+			loadStockLibrary: async () => {
+				set({ isLoading: true });
 				try {
-					const params = new URLSearchParams({
-						q: state.searchQuery.trim(),
-						media_type: state.mediaType,
-						category: state.category,
-						orientation: state.orientation,
-						order: state.order,
-						page: targetPage.toString(),
-						per_page: "24",
-					});
-
-					if (state.apiKey) {
-						params.set("custom_key", state.apiKey);
-					}
-
-					const response = await fetch(`/api/stock/pixabay/search?${params.toString()}`, {
-						signal,
-					});
-
-					if (!response.ok) {
-						throw new Error(`Failed to fetch stock: ${response.statusText}`);
-					}
-
-					const data = await response.json();
-					const hits: StockItem[] = data.hits || [];
-					const hasMore = !!data.hasMore;
-
-					// Deduplicate initial hits
-					const seen = new Set<string | number>();
-					const uniqueHits: StockItem[] = [];
-					for (const item of hits) {
-						if (!seen.has(item.id)) {
-							seen.add(item.id);
-							uniqueHits.push(item);
-						}
-					}
-
-					// Cache result
-					stockQueryCache.set(cacheKey, { hits: uniqueHits, hasMore });
-
-					set({
-						items: uniqueHits,
-						hasMore,
-						isDemoFallback: false,
-						isLoading: false,
-					});
+					const items = await stockStorage.loadAllStockItems();
+					set({ items, isLoading: false });
 				} catch (error) {
-					if (error instanceof Error && error.name === "AbortError") {
-						return; // Ignore aborted requests
-					}
-					console.error("Failed to load stock media:", error);
+					console.error("Failed to load stock library:", error);
 					set({ isLoading: false });
 				}
 			},
 
-			loadMore: async () => {
-				const state = get();
-				if (state.isLoading || state.isLoadingMore || !state.hasMore) return;
+			importFiles: async (files) => {
+				const fileArray = Array.from(files);
+				if (fileArray.length === 0) return;
 
-				const nextPage = state.page + 1;
-				const cacheKey = `${state.searchQuery.trim()}:${state.mediaType}:${state.category}:${state.orientation}:${state.order}:${nextPage}:${state.apiKey}`;
-
-				if (stockQueryCache.has(cacheKey)) {
-					const cached = stockQueryCache.get(cacheKey)!;
-					set((prev) => {
-						const existingIds = new Set(prev.items.map((i) => i.id));
-						const newHits = cached.hits.filter((i) => !existingIds.has(i.id));
-						return {
-							items: [...prev.items, ...newHits],
-							page: nextPage,
-							hasMore: cached.hasMore,
-						};
-					});
-					return;
-				}
-
-				set({ isLoadingMore: true });
+				set({ isImporting: true, importProgress: 0 });
+				const toastId = toast.loading(`正在导入 ${fileArray.length} 个素材到统一素材库...`);
 
 				try {
-					const params = new URLSearchParams({
-						q: state.searchQuery.trim(),
-						media_type: state.mediaType,
-						category: state.category,
-						orientation: state.orientation,
-						order: state.order,
-						page: nextPage.toString(),
-						per_page: "24",
+					const processedAssets = await processMediaAssets({
+						files: fileArray,
+						onProgress: ({ progress }) => {
+							set({ importProgress: progress });
+						},
 					});
 
-					if (state.apiKey) {
-						params.set("custom_key", state.apiKey);
+					if (processedAssets.length === 0) {
+						toast.error("没有可导入的有效媒体素材", { id: toastId });
+						set({ isImporting: false, importProgress: 0 });
+						return;
 					}
 
-					const response = await fetch(`/api/stock/pixabay/search?${params.toString()}`);
-					if (!response.ok) {
-						throw new Error(`Failed to fetch more stock: ${response.statusText}`);
+					const newStockItems: StockItem[] = [];
+
+					for (const asset of processedAssets) {
+						const id = generateUUID();
+						const now = new Date().toISOString();
+						const stockItem: StockItem = {
+							id,
+							name: asset.name,
+							type: asset.type,
+							tags: [],
+							file: asset.file,
+							url: asset.url || URL.createObjectURL(asset.file),
+							thumbnailUrl: asset.thumbnailUrl,
+							duration: asset.duration,
+							width: asset.width,
+							height: asset.height,
+							fps: asset.fps,
+							hasAudio: asset.hasAudio,
+							size: asset.file.size,
+							isFavorite: false,
+							createdAt: now,
+							updatedAt: now,
+						};
+
+						await stockStorage.saveStockItem(stockItem);
+						newStockItems.push(stockItem);
 					}
 
-					const data = await response.json();
-					const hits: StockItem[] = data.hits || [];
-					const hasMore = !!data.hasMore;
+					set((prev) => ({
+						items: [...newStockItems, ...prev.items],
+						isImporting: false,
+						importProgress: 0,
+					}));
 
-					// Deduplicate incoming hits
-					const seen = new Set<string | number>();
-					const uniqueHits: StockItem[] = [];
-					for (const item of hits) {
-						if (!seen.has(item.id)) {
-							seen.add(item.id);
-							uniqueHits.push(item);
+					toast.success(`成功导入 ${newStockItems.length} 个素材至素材库`, { id: toastId });
+				} catch (error) {
+					console.error("Failed to import stock files:", error);
+					toast.error("导入素材失败", { id: toastId });
+					set({ isImporting: false, importProgress: 0 });
+				}
+			},
+
+			deleteItem: async (id) => {
+				const item = get().items.find((i) => i.id === id);
+				if (!item) return;
+
+				try {
+					await stockStorage.deleteStockItem(id);
+					if (item.url) {
+						URL.revokeObjectURL(item.url);
+					}
+					set((prev) => ({
+						items: prev.items.filter((i) => i.id !== id),
+						selectedItemIds: prev.selectedItemIds.filter((itemId) => itemId !== id),
+						previewItem: prev.previewItem?.id === id ? null : prev.previewItem,
+					}));
+					toast.success(`已删除素材: ${item.name}`);
+				} catch (error) {
+					console.error("Failed to delete stock item:", error);
+					toast.error("删除素材失败");
+				}
+			},
+
+			deleteSelectedItems: async () => {
+				const { selectedItemIds, items } = get();
+				if (selectedItemIds.length === 0) return;
+
+				const count = selectedItemIds.length;
+				try {
+					for (const id of selectedItemIds) {
+						const item = items.find((i) => i.id === id);
+						await stockStorage.deleteStockItem(id);
+						if (item?.url) {
+							URL.revokeObjectURL(item.url);
 						}
 					}
-
-					stockQueryCache.set(cacheKey, { hits: uniqueHits, hasMore });
-
-					set((prev) => {
-						const existingIds = new Set(prev.items.map((i) => i.id));
-						const newHits = uniqueHits.filter((i) => !existingIds.has(i.id));
-						return {
-							items: [...prev.items, ...newHits],
-							page: nextPage,
-							hasMore,
-							isLoadingMore: false,
-						};
-					});
+					set((prev) => ({
+						items: prev.items.filter((i) => !selectedItemIds.includes(i.id)),
+						selectedItemIds: [],
+						previewItem: selectedItemIds.includes(prev.previewItem?.id || "") ? null : prev.previewItem,
+					}));
+					toast.success(`已批量删除 ${count} 个素材`);
 				} catch (error) {
-					console.error("Failed to load more stock media:", error);
-					set({ isLoadingMore: false });
+					console.error("Failed to batch delete stock items:", error);
+					toast.error("批量删除素材失败");
 				}
 			},
 
-			toggleSaveItem: (item) => {
-				const { savedItems } = get();
-				const exists = savedItems.some((s) => s.id === item.id);
-
-				if (exists) {
-					set({
-						savedItems: savedItems.filter((s) => s.id !== item.id),
-					});
-					toast.success("已从素材收藏夹移除");
-				} else {
-					const newSaved: SavedStockItem = {
-						...item,
-						savedAt: new Date().toISOString(),
-					};
-					set({
-						savedItems: [newSaved, ...savedItems],
-					});
-					toast.success("已收藏至素材库");
-				}
-			},
-
-			isItemSaved: (id) => {
-				return get().savedItems.some((s) => s.id === id);
-			},
-
-			downloadStockBlob: async (item) => {
-				const downloadUrl = item.downloadUrl || item.previewUrl;
-				if (!downloadUrl) return null;
+			renameItem: async (id, newName) => {
+				const trimmed = newName.trim();
+				if (!trimmed) return;
 
 				try {
-					const proxyUrl = `/api/stock/pixabay/proxy-download?url=${encodeURIComponent(downloadUrl)}`;
-					const res = await fetch(proxyUrl);
-					if (!res.ok) {
-						const directRes = await fetch(downloadUrl);
-						if (!directRes.ok) throw new Error("Download failed");
-						const blob = await directRes.blob();
-						const ext = item.type === "video" ? "mp4" : "jpg";
-						return new File([blob], `${item.title.replace(/[^\w\u4e00-\u9fa5]/g, "_")}.${ext}`, {
-							type: blob.type || (item.type === "video" ? "video/mp4" : "image/jpeg"),
-						});
-					}
-
-					const blob = await res.blob();
-					const ext = item.type === "video" ? "mp4" : "jpg";
-					return new File([blob], `${item.title.replace(/[^\w\u4e00-\u9fa5]/g, "_")}.${ext}`, {
-						type: blob.type || (item.type === "video" ? "video/mp4" : "image/jpeg"),
-					});
+					await stockStorage.updateStockMetadata(id, { name: trimmed });
+					set((prev) => ({
+						items: prev.items.map((i) => (i.id === id ? { ...i, name: trimmed, updatedAt: new Date().toISOString() } : i)),
+						previewItem: prev.previewItem?.id === id ? { ...prev.previewItem, name: trimmed } : prev.previewItem,
+					}));
+					toast.success("素材已重命名");
 				} catch (error) {
-					console.error("Error downloading stock file:", error);
-					return null;
+					console.error("Failed to rename stock item:", error);
+					toast.error("重命名失败");
+				}
+			},
+
+			toggleFavorite: async (id) => {
+				const item = get().items.find((i) => i.id === id);
+				if (!item) return;
+
+				const nextFav = !item.isFavorite;
+				try {
+					await stockStorage.updateStockMetadata(id, { isFavorite: nextFav });
+					set((prev) => ({
+						items: prev.items.map((i) => (i.id === id ? { ...i, isFavorite: nextFav } : i)),
+						previewItem: prev.previewItem?.id === id ? { ...prev.previewItem, isFavorite: nextFav } : prev.previewItem,
+					}));
+					toast.success(nextFav ? "已添加到收藏" : "已从收藏中移除");
+				} catch (error) {
+					console.error("Failed to toggle favorite:", error);
 				}
 			},
 
@@ -318,42 +245,37 @@ export const useStockStore = create<StockStoreState>()(
 					return false;
 				}
 
-				set((prev) => ({
-					downloadingIds: { ...prev.downloadingIds, [item.id]: true },
-				}));
-
+				const toastId = toast.loading(`正在将 \"${item.name}\" 导入到项目资产...`);
 				try {
-					const toastId = toast.loading(`正在下载并导入素材: ${item.title}...`);
-					const file = await get().downloadStockBlob(item);
-
-					if (!file) {
-						toast.error("下载素材文件失败", { id: toastId });
-						return false;
+					const existingAssets = editor.media.getAssets();
+					const existing = existingAssets.find((a) => a.name === item.name && a.file?.size === item.size);
+					if (existing) {
+						toast.info(`素材 \"${item.name}\" 已在当前项目资产中`, { id: toastId });
+						return true;
 					}
 
-					const processedAssets = await processMediaAssets({
-						files: [file],
+					await editor.media.addMediaAsset({
+						projectId: activeProject.metadata.id,
+						asset: {
+							name: item.name,
+							type: item.type,
+							file: item.file,
+							url: item.url,
+							thumbnailUrl: item.thumbnailUrl,
+							duration: item.duration,
+							width: item.width,
+							height: item.height,
+							fps: item.fps,
+							hasAudio: item.hasAudio,
+						},
 					});
 
-					for (const asset of processedAssets) {
-						await editor.media.addMediaAsset({
-							projectId: activeProject.metadata.id,
-							asset,
-						});
-					}
-
-					toast.success(`素材 "${item.title}" 已添加到资产库`, { id: toastId });
+					toast.success(`素材 \"${item.name}\" 已添加到当前工程`, { id: toastId });
 					return true;
 				} catch (error) {
 					console.error("Failed to import stock to project:", error);
-					toast.error("导入素材失败");
+					toast.error("导入到项目失败", { id: toastId });
 					return false;
-				} finally {
-					set((prev) => {
-						const next = { ...prev.downloadingIds };
-						delete next[item.id];
-						return { downloadingIds: next };
-					});
 				}
 			},
 
@@ -366,71 +288,72 @@ export const useStockStore = create<StockStoreState>()(
 					return false;
 				}
 
-				set((prev) => ({
-					downloadingIds: { ...prev.downloadingIds, [item.id]: true },
-				}));
-
+				const toastId = toast.loading(`正在插入素材: ${item.name}...`);
 				try {
-					const toastId = toast.loading(`正在添加素材到时间线: ${item.title}...`);
-					const file = await get().downloadStockBlob(item);
+					let asset = editor.media.getAssets().find((a) => a.name === item.name && a.file?.size === item.size);
 
-					if (!file) {
-						toast.error("下载素材文件失败", { id: toastId });
-						return false;
-					}
-
-					const processedAssets = await processMediaAssets({
-						files: [file],
-					});
-
-					const asset = processedAssets[0];
 					if (!asset) {
-						toast.error("处理素材失败", { id: toastId });
-						return false;
+						const created = await editor.media.addMediaAsset({
+							projectId: activeProject.metadata.id,
+							asset: {
+								name: item.name,
+								type: item.type,
+								file: item.file,
+								url: item.url,
+								thumbnailUrl: item.thumbnailUrl,
+								duration: item.duration,
+								width: item.width,
+								height: item.height,
+								fps: item.fps,
+								hasAudio: item.hasAudio,
+							},
+						});
+						if (!created) {
+							toast.error("添加素材失败", { id: toastId });
+							return false;
+						}
+						asset = created;
 					}
 
-					// Add to project assets
-					await editor.media.addMediaAsset({
-						projectId: activeProject.metadata.id,
-						asset,
-					});
-
-					// Insert to timeline
 					const currentTime = editor.playback.getCurrentTime();
+					const duration =
+						item.duration != null
+							? mediaTimeFromSeconds({ seconds: item.duration })
+							: DEFAULT_NEW_ELEMENT_DURATION;
+
 					const element = buildElementFromMedia({
-						media: asset,
+						mediaId: asset.id,
+						mediaType: asset.type,
+						name: asset.name,
+						duration,
 						startTime: currentTime,
 					});
 
 					editor.timeline.insertElement({
-						placement: { mode: "auto", trackType: "video" },
+						placement: { mode: "auto", trackType: asset.type === "audio" ? "audio" : "video" },
 						element,
 					});
 
-					toast.success(`素材已插入时间线`, { id: toastId });
+					toast.success(`已插入时间线: ${item.name}`, { id: toastId });
 					return true;
 				} catch (error) {
 					console.error("Failed to add stock to timeline:", error);
-					toast.error("添加素材到时间线失败");
+					toast.error("插入时间线失败", { id: toastId });
 					return false;
-				} finally {
-					set((prev) => {
-						const next = { ...prev.downloadingIds };
-						delete next[item.id];
-						return { downloadingIds: next };
-					});
 				}
+			},
+
+			getItem: (id) => {
+				return get().items.find((i) => i.id === id);
 			},
 		}),
 		{
-			name: "opencut-stock-store",
+			name: "opencut-stock-preferences",
 			partialize: (state) => ({
-				apiKey: state.apiKey,
-				savedItems: state.savedItems,
 				mediaType: state.mediaType,
-				category: state.category,
-				orientation: state.orientation,
-				order: state.order,
+				sortKey: state.sortKey,
+				sortOrder: state.sortOrder,
+				viewMode: state.viewMode,
 			}),
 		},
 	),

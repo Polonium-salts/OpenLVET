@@ -55,9 +55,17 @@ export function DraggableItem({
 		onAddToTimeline?.({ currentTime: editor.playback.getCurrentTime() });
 	};
 
-	const emptyImg = new window.Image();
-	emptyImg.src =
-		"data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=";
+const EMPTY_IMAGE_SRC =
+	"data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=";
+
+let cachedEmptyImg: HTMLImageElement | null = null;
+function getEmptyDragImage(): HTMLImageElement {
+	if (!cachedEmptyImg && typeof window !== "undefined") {
+		cachedEmptyImg = new window.Image();
+		cachedEmptyImg.src = EMPTY_IMAGE_SRC;
+	}
+	return cachedEmptyImg!;
+}
 
 	useEffect(() => {
 		if (!isDragging) return;
@@ -74,7 +82,10 @@ export function DraggableItem({
 	}, [isDragging]);
 
 	const handleDragStart = (event: React.DragEvent) => {
-		event.dataTransfer.setDragImage(emptyImg, 0, 0);
+		const img = getEmptyDragImage();
+		if (img) {
+			event.dataTransfer.setDragImage(img, 0, 0);
+		}
 
 		editor.timeline.dragSource.begin({
 			dataTransfer: event.dataTransfer,

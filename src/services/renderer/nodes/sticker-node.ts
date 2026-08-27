@@ -34,11 +34,20 @@ export function loadStickerSource({
 		});
 
 		const image = new Image();
+		image.crossOrigin = "anonymous";
 
 		await new Promise<void>((resolve, reject) => {
 			image.onload = () => resolve();
-			image.onerror = () =>
-				reject(new Error(`Failed to load sticker: ${stickerId}`));
+			image.onerror = () => {
+				// Retry with proxy if external image failed
+				if (url.startsWith("http://") || url.startsWith("https://")) {
+					image.onerror = () =>
+						reject(new Error(`Failed to load sticker: ${stickerId}`));
+					image.src = `/api/stickers/proxy?url=${encodeURIComponent(url)}`;
+				} else {
+					reject(new Error(`Failed to load sticker: ${stickerId}`));
+				}
+			};
 			image.src = url;
 		});
 

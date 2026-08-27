@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -11,12 +11,6 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-	DropdownMenu,
-	DropdownMenuCheckboxItem,
-	DropdownMenuContent,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -28,7 +22,6 @@ import type { SavedSound, SoundEffect } from "@/sounds/types";
 import { cn } from "@/utils/ui";
 import {
 	FavouriteIcon,
-	FilterMailIcon,
 	PauseIcon,
 	PlayIcon,
 	PlusSignIcon,
@@ -36,7 +29,7 @@ import {
 	Search01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { BUILTIN_MUSIC_TRACKS, type BuiltinSound } from "@/sounds/sounds-data";
+import type { BuiltinSound } from "@/sounds/sounds-data";
 
 export function SoundsView() {
 	return (
@@ -44,13 +37,22 @@ export function SoundsView() {
 			<Tabs defaultValue="music" className="flex h-full flex-col">
 				<div className="px-3 pt-3 pb-0">
 					<TabsList className="grid w-full grid-cols-3 bg-muted/60">
-						<TabsTrigger value="music" className="text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary font-medium">
+						<TabsTrigger
+							value="music"
+							className="text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary font-medium"
+						>
 							🎵 音乐库
 						</TabsTrigger>
-						<TabsTrigger value="sound-effects" className="text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary font-medium">
+						<TabsTrigger
+							value="sound-effects"
+							className="text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary font-medium"
+						>
 							🔔 音效库
 						</TabsTrigger>
-						<TabsTrigger value="saved" className="text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary font-medium">
+						<TabsTrigger
+							value="saved"
+							className="text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary font-medium"
+						>
 							❤️ 已收藏
 						</TabsTrigger>
 					</TabsList>
@@ -99,27 +101,46 @@ function formatTime(seconds: number): string {
 function MusicLibraryView() {
 	const [activeCategory, setActiveCategory] = useState("all");
 	const [searchKeyword, setSearchKeyword] = useState("");
+	const [musicTracks, setMusicTracks] = useState<BuiltinSound[]>([]);
+	const [isLoading, setIsLoading] = useState(false);
 	const [playingId, setPlayingId] = useState<number | null>(null);
 	const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
 
 	const { addSoundToTimeline, isSoundSaved, toggleSavedSound } = useSoundsStore();
 
-	const filteredMusic = useMemo(() => {
-		let list = [...BUILTIN_MUSIC_TRACKS];
-		if (activeCategory !== "all") {
-			list = list.filter((m) => m.category === activeCategory);
-		}
-		if (searchKeyword.trim()) {
-			const q = searchKeyword.toLowerCase().trim();
-			list = list.filter(
-				(m) =>
-					m.name.toLowerCase().includes(q) ||
-					m.description.toLowerCase().includes(q) ||
-					(m.artist && m.artist.toLowerCase().includes(q)) ||
-					m.tags.some((t) => t.toLowerCase().includes(q)),
-			);
-		}
-		return list;
+	useEffect(() => {
+		let isCancelled = false;
+		setIsLoading(true);
+
+		const timer = setTimeout(async () => {
+			try {
+				const params = new URLSearchParams({
+					type: "songs",
+					category: activeCategory,
+					page_size: "40",
+				});
+				if (searchKeyword.trim()) {
+					params.set("q", searchKeyword.trim());
+				}
+
+				const res = await fetch(`/api/sounds/search?${params.toString()}`);
+				if (res.ok && !isCancelled) {
+					const data = await res.json();
+					setMusicTracks(data.results || []);
+				}
+			} catch (e) {
+				console.error("Failed to load music tracks from API:", e);
+			} finally {
+				if (!isCancelled) {
+					setIsLoading(false);
+				}
+			}
+		}, 150);
+
+		return () => {
+			isCancelled = true;
+			clearTimeout(timer);
+		};
 	}, [activeCategory, searchKeyword]);
 
 	const handlePlayToggle = (track: BuiltinSound) => {
@@ -169,6 +190,7 @@ function MusicLibraryView() {
 				{MUSIC_CATEGORIES.map((cat) => (
 					<button
 						key={cat.id}
+						type="button"
 						onClick={() => setActiveCategory(cat.id)}
 						className={cn(
 							"whitespace-nowrap px-2.5 py-1 rounded-full text-xs transition-colors shrink-0",
@@ -184,124 +206,188 @@ function MusicLibraryView() {
 
 			{/* Music Tracks List */}
 			<ScrollArea className="h-full flex-1 pr-2">
-				<div className="flex flex-col gap-2.5 pb-4">
-					{filteredMusic.map((track) => {
-						const isPlaying = playingId === track.id;
-						const isSaved = isSoundSaved({ soundId: track.id });
-						const soundEffectItem: SoundEffect = {
-							id: track.id,
-							name: track.name,
-							description: track.description,
-							url: track.url,
-							previewUrl: track.previewUrl,
-							downloadUrl: track.downloadUrl,
-							duration: track.duration,
-							filesize: track.filesize,
-							type: track.type,
-							channels: track.channels,
-							bitrate: track.bitrate,
-							bitdepth: track.bitdepth,
-							samplerate: track.samplerate,
-							username: track.artist || track.username,
-							tags: track.tags,
-							license: track.license,
-							created: track.created,
-							downloads: track.downloads,
-							rating: track.rating,
-							ratingCount: track.ratingCount,
-						};
-
-						return (
+				{isLoading && musicTracks.length === 0 ? (
+					<div className="flex flex-col gap-2 pt-1">
+						{Array.from({ length: 6 }).map((_, i) => (
 							<div
-								key={track.id}
-								className={cn(
-									"group relative flex items-center justify-between p-2.5 rounded-lg border transition-all",
-									isPlaying
-										? "border-primary/50 bg-primary/10 shadow-xs"
-										: "border-border/50 bg-card/60 hover:bg-muted/50 hover:border-border",
-								)}
-							>
-								{/* Left: Play button & Track Info */}
-								<div
-									className="flex min-w-0 flex-1 items-center gap-3 cursor-pointer"
-									onClick={() => handlePlayToggle(track)}
-								>
-									{/* Disc / Play Icon */}
-									<div
-										className={cn(
-											"relative flex size-10 shrink-0 items-center justify-center rounded-lg transition-all",
-											isPlaying
-												? "bg-primary text-primary-foreground shadow-md scale-105"
-												: "bg-gradient-to-br from-cyan-500/20 to-blue-600/20 text-cyan-400 group-hover:bg-primary/20",
-										)}
-									>
-										{isPlaying ? (
-											<HugeiconsIcon icon={PauseIcon} className="size-4 animate-pulse" />
-										) : (
-											<HugeiconsIcon icon={PlayIcon} className="size-4 ml-0.5" />
-										)}
-									</div>
+								key={i}
+								className="h-16 rounded-lg bg-muted/40 animate-pulse border border-border/40"
+							/>
+						))}
+					</div>
+				) : musicTracks.length === 0 ? (
+					<div className="flex flex-col items-center justify-center py-12 text-center gap-2">
+						<div className="size-10 rounded-full bg-muted/40 flex items-center justify-center text-muted-foreground">
+							<HugeiconsIcon icon={MusicNote03Icon} className="size-5" />
+						</div>
+						<p className="text-xs font-medium text-foreground">未找到相关配乐</p>
+						<p className="text-[11px] text-muted-foreground">
+							尝试更换关键词或在上方切换分类
+						</p>
+					</div>
+				) : (
+					<div className="flex flex-col gap-2.5 pb-4">
+						{musicTracks.map((track) => {
+							const soundEffectItem: SoundEffect = {
+								id: track.id,
+								name: track.name,
+								description: track.description,
+								url: track.url,
+								previewUrl: track.previewUrl,
+								downloadUrl: track.downloadUrl,
+								duration: track.duration,
+								filesize: track.filesize,
+								type: track.type,
+								channels: track.channels,
+								bitrate: track.bitrate,
+								bitdepth: track.bitdepth,
+								samplerate: track.samplerate,
+								username: track.artist || track.username,
+								tags: track.tags,
+								license: track.license,
+								created: track.created,
+								downloads: track.downloads,
+								rating: track.rating,
+								ratingCount: track.ratingCount,
+							};
 
-									{/* Meta */}
-									<div className="min-w-0 flex-1">
-										<p className="truncate text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
-											{track.name}
-										</p>
-										<div className="flex items-center gap-2 mt-0.5">
-											<span className="text-[11px] text-muted-foreground truncate">
-												{track.artist || track.username}
-											</span>
-											<span className="text-[10px] text-muted-foreground/60">·</span>
-											<span className="text-[10px] font-mono text-muted-foreground bg-muted/80 px-1.5 py-0.2 rounded">
-												{formatTime(track.duration)}
-											</span>
-										</div>
-									</div>
-								</div>
-
-								{/* Right Action buttons */}
-								<div className="flex items-center gap-1.5 pl-2 shrink-0">
-									<Button
-										variant="ghost"
-										size="icon"
-										className="size-7 text-muted-foreground hover:text-primary hover:bg-primary/10"
-										onClick={async (e) => {
-											e.stopPropagation();
-											await addSoundToTimeline({ sound: soundEffectItem });
-										}}
-										title="添加配乐到时间线"
-									>
-										<HugeiconsIcon icon={PlusSignIcon} className="size-3.5" />
-									</Button>
-									<Button
-										variant="ghost"
-										size="icon"
-										className={cn(
-											"size-7",
-											isSaved
-												? "text-red-500 hover:text-red-600"
-												: "text-muted-foreground hover:text-foreground",
-										)}
-										onClick={(e) => {
-											e.stopPropagation();
-											toggleSavedSound({ soundEffect: soundEffectItem });
-										}}
-										title={isSaved ? "取消收藏" : "收藏配乐"}
-									>
-										<HugeiconsIcon
-											icon={FavouriteIcon}
-											className={cn("size-3.5", isSaved && "fill-current")}
-										/>
-									</Button>
-								</div>
-							</div>
-						);
-					})}
-				</div>
+							return (
+								<MusicTrackCard
+									key={track.id}
+									track={track}
+									isPlaying={playingId === track.id}
+									isSaved={isSoundSaved({ soundId: track.id })}
+									onPlayToggle={() => handlePlayToggle(track)}
+									onAddToTimeline={async () => {
+										await addSoundToTimeline({ sound: soundEffectItem });
+									}}
+									onToggleSave={() => {
+										toggleSavedSound({ soundEffect: soundEffectItem });
+									}}
+								/>
+							);
+						})}
+					</div>
+				)}
 			</ScrollArea>
 		</div>
 	);
 }
+
+interface MusicTrackCardProps {
+	track: BuiltinSound;
+	isPlaying: boolean;
+	isSaved: boolean;
+	onPlayToggle: () => void;
+	onAddToTimeline: () => void;
+	onToggleSave: () => void;
+}
+
+function MusicTrackCard({
+	track,
+	isPlaying,
+	isSaved,
+	onPlayToggle,
+	onAddToTimeline,
+	onToggleSave,
+}: MusicTrackCardProps) {
+	return (
+		<div
+			className={cn(
+				"group relative flex items-center justify-between p-2.5 rounded-lg border transition-all",
+				isPlaying
+					? "border-primary/50 bg-primary/10 shadow-xs"
+					: "border-border/50 bg-card/60 hover:bg-muted/50 hover:border-border",
+			)}
+		>
+			{/* Left: Play button & Track Info */}
+			<div
+				className="flex min-w-0 flex-1 items-center gap-3 cursor-pointer"
+				onClick={onPlayToggle}
+			>
+				{/* Disc / Play Icon */}
+				<div
+					className={cn(
+						"relative flex size-10 shrink-0 items-center justify-center rounded-lg transition-all",
+						isPlaying
+							? "bg-primary text-primary-foreground shadow-md scale-105"
+							: "bg-gradient-to-br from-cyan-500/20 to-blue-600/20 text-cyan-400 group-hover:bg-primary/20",
+					)}
+				>
+					{isPlaying ? (
+						<HugeiconsIcon icon={PauseIcon} className="size-4 animate-pulse" />
+					) : (
+						<HugeiconsIcon icon={PlayIcon} className="size-4 ml-0.5" />
+					)}
+				</div>
+
+				{/* Meta */}
+				<div className="min-w-0 flex-1">
+					<p className="truncate text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
+						{track.name}
+					</p>
+					<div className="flex items-center gap-2 mt-0.5">
+						<span className="text-[11px] text-muted-foreground truncate">
+							{track.artist || track.username}
+						</span>
+						<span className="text-[10px] text-muted-foreground/60">·</span>
+						<span className="text-[10px] font-mono text-muted-foreground bg-muted/80 px-1.5 py-0.2 rounded">
+							{formatTime(track.duration)}
+						</span>
+					</div>
+				</div>
+			</div>
+
+			{/* Right Action buttons */}
+			<div className="flex items-center gap-1.5 pl-2 shrink-0">
+				<Button
+					variant="ghost"
+					size="icon"
+					className="size-7 text-muted-foreground hover:text-primary hover:bg-primary/10"
+					onClick={(e) => {
+						e.stopPropagation();
+						onAddToTimeline();
+					}}
+					title="添加配乐到时间线"
+				>
+					<HugeiconsIcon icon={PlusSignIcon} className="size-3.5" />
+				</Button>
+				<Button
+					variant="ghost"
+					size="icon"
+					className={cn(
+						"size-7",
+						isSaved
+							? "text-red-500 hover:text-red-600"
+							: "text-muted-foreground hover:text-foreground",
+					)}
+					onClick={(e) => {
+						e.stopPropagation();
+						onToggleSave();
+					}}
+					title={isSaved ? "取消收藏" : "收藏配乐"}
+				>
+					<HugeiconsIcon
+						icon={FavouriteIcon}
+						className={cn("size-3.5", isSaved && "fill-current")}
+					/>
+				</Button>
+			</div>
+		</div>
+	);
+}
+
+const SFX_CATEGORIES = [
+	{ id: "", label: "全部" },
+	{ id: "转场", label: "💨 转场风声" },
+	{ id: "气泡", label: "🫧 气泡弹跳" },
+	{ id: "重低音", label: "💥 电影重音" },
+	{ id: "打字", label: "⌨️ 机械打字" },
+	{ id: "故障", label: "⚡ 科技故障" },
+	{ id: "魔法", label: "✨ 魔法闪光" },
+	{ id: "游戏", label: "🎮 游戏通关" },
+	{ id: "自然", label: "🌿 自然环境" },
+];
 
 function SoundEffectsView() {
 	const {
@@ -335,9 +421,7 @@ function SoundEffectsView() {
 	});
 
 	const [playingId, setPlayingId] = useState<number | null>(null);
-	const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
-		null,
-	);
+	const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
 
 	const { scrollAreaRef, handleScroll } = useInfiniteScroll({
 		onLoadMore: loadMore,
@@ -395,7 +479,7 @@ function SoundEffectsView() {
 			}
 		};
 
-		const timeoutId = setTimeout(fetchTopSounds, 100, {});
+		const timeoutId = setTimeout(fetchTopSounds, 100);
 
 		return () => {
 			shouldIgnore = true;
@@ -454,6 +538,25 @@ function SoundEffectsView() {
 				</div>
 			</div>
 
+			{/* SFX Category Filter Chips */}
+			<div className="flex gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+				{SFX_CATEGORIES.map((cat) => (
+					<button
+						key={cat.id}
+						type="button"
+						onClick={() => setSearchQuery({ query: cat.id })}
+						className={cn(
+							"whitespace-nowrap px-2.5 py-1 rounded-full text-xs transition-colors shrink-0",
+							searchQuery === cat.id
+								? "bg-primary text-primary-foreground font-medium shadow-xs"
+								: "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground",
+						)}
+					>
+						{cat.label}
+					</button>
+				))}
+			</div>
+
 			<ScrollArea
 				className="h-full flex-1 pr-2"
 				ref={scrollAreaRef}
@@ -477,9 +580,7 @@ function SoundEffectsView() {
 function SavedSoundsView() {
 	const { savedSounds, loadSavedSounds, clearSavedSounds } = useSoundsStore();
 	const [playingId, setPlayingId] = useState<number | null>(null);
-	const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
-		null,
-	);
+	const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
 	const [showClearDialog, setShowClearDialog] = useState(false);
 
 	useEffect(() => {
@@ -493,24 +594,24 @@ function SavedSoundsView() {
 	}): SoundEffect => ({
 		id: savedSound.id,
 		name: savedSound.name,
-		description: savedSound.description,
-		url: savedSound.url,
+		description: savedSound.name,
+		url: savedSound.previewUrl || "",
 		previewUrl: savedSound.previewUrl,
 		downloadUrl: savedSound.downloadUrl,
 		duration: savedSound.duration,
-		filesize: savedSound.filesize,
-		type: savedSound.type,
-		channels: savedSound.channels,
-		bitrate: savedSound.bitrate,
-		bitdepth: savedSound.bitdepth,
-		samplerate: savedSound.samplerate,
+		filesize: 0,
+		type: "mp3",
+		channels: 2,
+		bitrate: 320,
+		bitdepth: 16,
+		samplerate: 44100,
 		username: savedSound.username,
-		tags: savedSound.tags,
-		license: savedSound.license,
-		created: savedSound.created,
-		downloads: savedSound.downloads,
-		rating: savedSound.rating,
-		ratingCount: savedSound.ratingCount,
+		tags: savedSound.tags || [],
+		license: savedSound.license || "Creative Commons 0",
+		created: savedSound.savedAt || new Date().toISOString(),
+		downloads: 0,
+		rating: 5,
+		ratingCount: 1,
 	});
 
 	const playSound = ({ sound }: { sound: SoundEffect }) => {

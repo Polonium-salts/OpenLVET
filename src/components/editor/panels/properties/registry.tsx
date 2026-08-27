@@ -21,12 +21,14 @@ import {
 	MusicNote03Icon,
 	MagicWand05Icon,
 	DashboardSpeed02Icon,
+	Mic01Icon,
 } from "@hugeicons/core-free-icons";
 import { ElementParamsTab } from "./components/element-params-tab";
 import { ClipEffectsTab, StandaloneEffectTab } from "@/effects/components/effects-tab";
 import { MasksTab } from "@/masks/components/masks-tab";
 import { SpeedTab } from "@/speed/components/speed-tab";
 import { GraphicTab } from "@/graphics/components/graphic-tab";
+import { TtsTab } from "@/tts/components/tts-tab";
 import { OcShapesIcon } from "@/components/icons";
 
 const TRANSFORM_PARAM_KEYS = [
@@ -192,6 +194,15 @@ function buildTextTab({ element }: { element: TextElement }): PropertiesTabDef {
 	};
 }
 
+function buildTtsTab({ element }: { element: TextElement }): PropertiesTabDef {
+	return {
+		id: "tts",
+		label: "朗读",
+		icon: <HugeiconsIcon icon={Mic01Icon} size={16} />,
+		content: ({ trackId }) => <TtsTab element={element} trackId={trackId} />,
+	};
+}
+
 function buildGraphicTab({
 	element,
 }: {
@@ -229,6 +240,7 @@ function getTextConfig({
 		defaultTab: "text",
 		tabs: [
 			buildTextTab({ element }),
+			buildTtsTab({ element }),
 			buildTransformTab({ element }),
 			buildBlendingTab({ element }),
 		],

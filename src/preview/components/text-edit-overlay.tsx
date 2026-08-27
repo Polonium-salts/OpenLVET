@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePreviewViewport } from "@/preview/components/preview-viewport";
 import { useEditor } from "@/editor/use-editor";
 import type { TextElement } from "@/timeline";
@@ -29,35 +29,43 @@ export function TextEditOverlay({
 }) {
 	const editor = useEditor();
 	const viewport = usePreviewViewport();
-	const divRef = useRef<HTMLDivElement>(null);
+	const textareaRef = useRef<HTMLTextAreaElement>(null);
+	const [text, setText] = useState<string>(
+		typeof element.params.content === "string"
+			? element.params.content
+			: String(element.params.content || ""),
+	);
 
 	useEffect(() => {
-		const div = divRef.current;
-		if (!div) return;
-		div.focus();
-		const range = document.createRange();
-		range.selectNodeContents(div);
-		const selection = window.getSelection();
-		selection?.removeAllRanges();
-		selection?.addRange(range);
+		const ta = textareaRef.current;
+		if (!ta) return;
+		ta.focus();
+		ta.select();
 	}, []);
 
-	const handleInput = useCallback(() => {
-		const div = divRef.current;
-		if (!div) return;
-		const text = div.innerText;
-		editor.timeline.previewElements({
-			updates: [{ trackId, elementId, updates: { params: { content: text } } }],
-		});
-	}, [editor.timeline, trackId, elementId]);
+	const handleChange = useCallback(
+		(e: React.ChangeEvent<HTMLTextAreaElement>) => {
+			const newText = e.target.value;
+			setText(newText);
+			editor.timeline.previewElements({
+				updates: [
+					{
+						trackId,
+						elementId,
+						updates: { params: { ...element.params, content: newText } },
+					},
+				],
+			});
+		},
+		[editor.timeline, trackId, elementId, element.params],
+	);
 
 	const handleKeyDown = useCallback(
-		({ event }: { event: React.KeyboardEvent }) => {
+		(event: React.KeyboardEvent<HTMLTextAreaElement>) => {
 			const { key } = event;
 			if (key === "Escape") {
 				event.preventDefault();
 				onCommit();
-				return;
 			}
 		},
 		[onCommit],
@@ -116,14 +124,15 @@ export function TextEditOverlay({
 				transformOrigin: "center center",
 			}}
 		>
-			<div
-				ref={divRef}
-				contentEditable
-				suppressContentEditableWarning
-				tabIndex={0}
-				role="textbox"
+			<textarea
+				ref={textareaRef}
+				value={text}
+				onChange={handleChange}
+				onBlur={onCommit}
+				onKeyDown={handleKeyDown}
 				aria-label="Edit text"
-				className="cursor-text select-text outline-none whitespace-pre"
+				rows={Math.max(1, text.split("\n").length)}
+				className="resize-none overflow-hidden outline-none whitespace-pre border-none p-0 m-0 bg-transparent block"
 				style={{
 					fontSize: resolvedTextLayout.scaledFontSize,
 					fontFamily: textParams.fontFamily,
@@ -143,14 +152,10 @@ export function TextEditOverlay({
 					padding: shouldShowBackground
 						? `${canvasPaddingY}px ${canvasPaddingX}px`
 						: 0,
-					minWidth: 1,
+					minWidth: "1em",
+					width: "max-content",
 				}}
-				onInput={handleInput}
-				onBlur={onCommit}
-				onKeyDown={(event) => handleKeyDown({ event })}
-			>
-				{textParams.content}
-			</div>
+			/>
 		</div>
 	);
 }

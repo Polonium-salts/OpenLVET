@@ -15,6 +15,7 @@ export interface MediaDragData extends BaseDragData {
 export interface TextDragData extends BaseDragData {
 	type: "text";
 	content: string;
+	params?: Partial<ParamValues>;
 }
 
 export interface StickerDragData extends BaseDragData {
@@ -28,6 +29,13 @@ export interface GraphicDragData extends BaseDragData {
 	params: Partial<ParamValues>;
 }
 
+export interface StockDragData extends BaseDragData {
+	type: "stock";
+	stockId: string;
+	mediaType: "image" | "video" | "audio";
+	targetElementTypes?: MaskableElement["type"][];
+}
+
 export interface EffectDragData extends BaseDragData {
 	type: "effect";
 	effectType: string;
@@ -36,6 +44,7 @@ export interface EffectDragData extends BaseDragData {
 
 export type TimelineDragData =
 	| MediaDragData
+	| StockDragData
 	| TextDragData
 	| StickerDragData
 	| GraphicDragData

@@ -290,7 +290,7 @@ function computeFreeformParamUpdate({
 
 export const freeformMaskDefinition: MaskDefinition<"freeform"> = {
 	type: "freeform",
-	name: "Pen tool",
+	name: "画笔 / 自定义",
 	features: {
 		hasPosition: true,
 		hasRotation: true,

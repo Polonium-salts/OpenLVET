@@ -182,7 +182,7 @@ function computeSplitMaskParamUpdate({
 
 export const splitMaskDefinition: MaskDefinition<"split"> = {
 	type: "split",
-	name: "Split",
+	name: "线性",
 	features: {
 		hasPosition: true,
 		hasRotation: true,

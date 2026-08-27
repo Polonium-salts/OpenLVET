@@ -208,7 +208,7 @@ function computeTextMaskParamUpdate({
 
 export const textMaskDefinition: MaskDefinition<"text"> = {
 	type: "text",
-	name: "Text",
+	name: "文字",
 	features: {
 		hasPosition: true,
 		hasRotation: true,

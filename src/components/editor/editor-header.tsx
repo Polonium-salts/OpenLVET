@@ -84,9 +84,9 @@ function ProjectDropdown() {
 					name: newName.trim(),
 				});
 			} catch (error) {
-				toast.error("Failed to rename project", {
+				toast.error("重命名工程失败", {
 					description:
-						error instanceof Error ? error.message : "Please try again",
+						error instanceof Error ? error.message : "请稍后重试",
 				});
 			} finally {
 				setOpenDialog(null);
@@ -102,9 +102,9 @@ function ProjectDropdown() {
 				});
 				router.push("/");
 			} catch (error) {
-				toast.error("Failed to delete project", {
+				toast.error("删除工程失败", {
 					description:
-						error instanceof Error ? error.message : "Please try again",
+						error instanceof Error ? error.message : "请稍后重试",
 				});
 			} finally {
 				setOpenDialog(null);

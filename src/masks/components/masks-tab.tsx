@@ -643,7 +643,7 @@ function MaskParamsFields({
 
 const LETTER_SPACING_PARAM: NumberParamDefinition = {
 	key: "letterSpacing",
-	label: "Letter spacing",
+	label: "字间距",
 	type: "number",
 	default: 0,
 	min: -100,
@@ -653,7 +653,7 @@ const LETTER_SPACING_PARAM: NumberParamDefinition = {
 
 const LINE_HEIGHT_PARAM: NumberParamDefinition = {
 	key: "lineHeight",
-	label: "Line height",
+	label: "行高",
 	type: "number",
 	default: 1.2,
 	min: 0.1,

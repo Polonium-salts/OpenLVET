@@ -9,7 +9,7 @@ interface BaseDragData {
 export interface MediaDragData extends BaseDragData {
 	type: "media";
 	mediaType: "image" | "video" | "audio";
-	targetElementTypes?: MaskableElement["type"][];
+	targetElementTypes?: readonly MaskableElement["type"][];
 }
 
 export interface TextDragData extends BaseDragData {
@@ -33,13 +33,18 @@ export interface StockDragData extends BaseDragData {
 	type: "stock";
 	stockId: string;
 	mediaType: "image" | "video" | "audio";
-	targetElementTypes?: MaskableElement["type"][];
+	targetElementTypes?: readonly MaskableElement["type"][];
 }
 
 export interface EffectDragData extends BaseDragData {
 	type: "effect";
 	effectType: string;
-	targetElementTypes: VisualElement["type"][];
+	targetElementTypes: readonly VisualElement["type"][];
+}
+
+export interface TransitionDragData extends BaseDragData {
+	type: "transition";
+	transitionType: string;
 }
 
 export type TimelineDragData =
@@ -48,4 +53,5 @@ export type TimelineDragData =
 	| TextDragData
 	| StickerDragData
 	| GraphicDragData
-	| EffectDragData;
+	| EffectDragData
+	| TransitionDragData;

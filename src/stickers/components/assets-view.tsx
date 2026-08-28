@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import type { CSSProperties } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { DraggableItem } from "@/components/editor/panels/assets/draggable-item";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,6 @@ import {
 	buildStickerElement,
 } from "@/timeline/element-utils";
 import { STICKER_CATEGORIES } from "@/stickers/categories";
-import { getRegionLabel, resolveQueryToRegions } from "@/stickers";
 import { parseShapeStickerId } from "@/stickers/providers/shapes";
 import type { TimelineDragData } from "@/timeline/drag";
 import type {
@@ -29,6 +28,7 @@ import { cn } from "@/utils/ui";
 import {
 	HappyIcon,
 	Search01Icon,
+	SparklesIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
@@ -52,6 +52,26 @@ export function StickersView() {
 
 	return (
 		<div className="flex h-full flex-col py-2">
+			{/* Sticker Square Banner Header */}
+			<div className="mx-2 mb-2 px-2.5 py-2 rounded-xl border border-sky-500/20 bg-gradient-to-r from-sky-500/10 via-pink-500/5 to-purple-500/10 flex items-center justify-between shadow-xs">
+				<div className="flex flex-col">
+					<div className="flex items-center gap-1.5 font-bold text-xs text-foreground">
+						<span>贴纸</span>
+						<span className="px-1.5 py-0.2 rounded-md text-[11px] bg-primary/20 text-primary font-mono font-bold">
+							(9999+)
+						</span>
+					</div>
+					<span className="text-[10px] text-muted-foreground mt-0.5">
+						已有 3380+ 位 UP 主贡献与 18,000+ 款官方表情包
+					</span>
+				</div>
+				<div className="flex items-center gap-1">
+					<span className="text-[10px] text-muted-foreground bg-background/60 px-1.5 py-0.5 rounded border border-border/40 shrink-0">
+						可拖拽上轨
+					</span>
+				</div>
+			</div>
+
 			<div className="px-2">
 				<div className="relative">
 					<HugeiconsIcon
@@ -104,10 +124,17 @@ export function StickersView() {
 function StickerGrid({
 	items,
 	shouldCapSize = false,
+	initialCount = 60,
+	batchSize = 60,
 }: {
 	items: StickerData[];
 	shouldCapSize?: boolean;
+	initialCount?: number;
+	batchSize?: number;
 }) {
+	const [visibleCount, setVisibleCount] = useState(initialCount);
+	const loadMoreRef = useRef<HTMLDivElement>(null);
+
 	const gridStyle: CSSProperties & {
 		"--sticker-min": string;
 		"--sticker-max"?: string;
@@ -119,11 +146,63 @@ function StickerGrid({
 		...(shouldCapSize ? { "--sticker-max": "140px" } : {}),
 	};
 
+	const displayedItems = useMemo(
+		() => items.slice(0, visibleCount),
+		[items, visibleCount],
+	);
+	const hasMore = visibleCount < items.length;
+
+	useEffect(() => {
+		if (!hasMore) return;
+		const el = loadMoreRef.current;
+		if (!el) return;
+
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries[0]?.isIntersecting) {
+					setVisibleCount((prev) => Math.min(items.length, prev + batchSize));
+				}
+			},
+			{ rootMargin: "300px" },
+		);
+
+		observer.observe(el);
+		return () => observer.disconnect();
+	}, [hasMore, items.length, batchSize]);
+
 	return (
-		<div className="grid gap-2" style={gridStyle}>
-			{items.map((item) => (
-				<StickerItem key={item.id} item={item} shouldCapSize={shouldCapSize} />
-			))}
+		<div className="flex flex-col gap-3">
+			<div className="grid gap-2" style={gridStyle}>
+				{displayedItems.map((item) => (
+					<StickerItem key={item.id} item={item} shouldCapSize={shouldCapSize} />
+				))}
+			</div>
+
+			{hasMore && (
+				<div
+					ref={loadMoreRef}
+					className="flex flex-col items-center justify-center py-4 gap-2 text-xs text-muted-foreground"
+				>
+					<div className="flex items-center gap-2">
+						<Spinner className="size-4 text-primary" />
+						<span>加载更多贴纸 ({displayedItems.length} / {items.length})...</span>
+					</div>
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={() => setVisibleCount((prev) => Math.min(items.length, prev + 120))}
+						className="h-7 text-xs"
+					>
+						加载下一批贴纸
+					</Button>
+				</div>
+			)}
+
+			{!hasMore && items.length > 30 && (
+				<div className="text-center py-3 text-[11px] text-muted-foreground/60 border-t border-border/20 mt-2">
+					已加载全部 {items.length} 款贴纸素材
+				</div>
+			)}
 		</div>
 	);
 }
@@ -155,29 +234,6 @@ function EmptyView({ message }: { message: string }) {
 	);
 }
 
-function RegionBanner({ region }: { region: string }) {
-	return (
-		<div className="flex h-7 items-center gap-1.5 rounded-lg border border-sky-100 bg-sky-50 px-2 dark:bg-sky-950/40 dark:border-sky-900">
-			<svg
-				width="12"
-				height="12"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				strokeWidth="2"
-				strokeLinecap="round"
-				strokeLinejoin="round"
-				className="shrink-0 text-sky-600 dark:text-sky-400"
-				aria-hidden="true"
-			>
-				<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-				<circle cx="12" cy="10" r="3" />
-			</svg>
-			<span className="text-xs font-semibold text-sky-600 dark:text-sky-400">{region}</span>
-		</div>
-	);
-}
-
 function StickersContentView() {
 	const {
 		browseContent,
@@ -201,15 +257,8 @@ function StickersContentView() {
 		}
 
 		if (searchResults?.items.length) {
-			const normalizedQuery = searchQuery.trim().toLowerCase();
-			const isRegionSearch =
-				selectedCategory === "flags" &&
-				resolveQueryToRegions({ query: normalizedQuery }) !== null;
-			const regionLabel = getRegionLabel({ query: normalizedQuery });
-
 			return (
 				<div className="flex flex-col gap-3 pb-4">
-					{isRegionSearch && <RegionBanner region={regionLabel} />}
 					<div className="flex items-center justify-between">
 						<span className="text-muted-foreground text-xs">
 							找到 {searchResults.total} 个贴纸

@@ -17,6 +17,8 @@ export async function GET(request: NextRequest) {
 			"hdslb.com",
 			"bilibili.com",
 			"bilivideo.com",
+			"jsdelivr.net",
+			"githubusercontent.com",
 		];
 		const isAllowed = allowedHosts.some(
 			(host) => parsed.hostname === host || parsed.hostname.endsWith(`.${host}`),
@@ -30,7 +32,7 @@ export async function GET(request: NextRequest) {
 			headers: {
 				"User-Agent":
 					"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
-				Referer: "https://cool.bilibili.com",
+				Referer: "https://www.bilibili.com/",
 			},
 		});
 
@@ -38,7 +40,21 @@ export async function GET(request: NextRequest) {
 			return new NextResponse(`Upstream returned ${res.status}`, { status: res.status });
 		}
 
-		const contentType = res.headers.get("content-type") || "image/png";
+		let contentType = res.headers.get("content-type") || "image/png";
+		// Normalize content-type based on file extension if upstream sends generic octet-stream
+		const pathname = parsed.pathname.toLowerCase();
+		if (pathname.endsWith(".gif")) {
+			contentType = "image/gif";
+		} else if (pathname.endsWith(".png")) {
+			contentType = "image/png";
+		} else if (pathname.endsWith(".webp")) {
+			contentType = "image/webp";
+		} else if (pathname.endsWith(".jpg") || pathname.endsWith(".jpeg")) {
+			contentType = "image/jpeg";
+		} else if (pathname.endsWith(".svg")) {
+			contentType = "image/svg+xml";
+		}
+
 		const arrayBuffer = await res.arrayBuffer();
 
 		return new NextResponse(arrayBuffer, {
@@ -47,6 +63,7 @@ export async function GET(request: NextRequest) {
 				"Cache-Control": "public, max-age=31536000, immutable",
 				"Access-Control-Allow-Origin": "*",
 				"Access-Control-Allow-Methods": "GET, OPTIONS",
+				"Access-Control-Allow-Headers": "Content-Type, Range",
 			},
 		});
 	} catch (err) {

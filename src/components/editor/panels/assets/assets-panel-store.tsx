@@ -11,8 +11,8 @@ import {
 	MagicWand05Icon,
 	TextIcon,
 	Settings01Icon,
-	SlidersHorizontalIcon,
 	ColorsIcon,
+	PuzzleIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 
@@ -23,12 +23,12 @@ export const TAB_KEYS = [
 	"stickers",
 	"effects",
 	"transitions",
-	"captions",
-	"adjustment",
+	"plugins",
 	"settings",
 ] as const;
 
-export type Tab = (typeof TAB_KEYS)[number];
+export type StaticTab = (typeof TAB_KEYS)[number];
+export type Tab = StaticTab | (string & {});
 
 const createHugeiconsIcon =
 	({ icon }: { icon: IconSvgElement }) =>
@@ -61,20 +61,16 @@ export const tabs = {
 		icon: createHugeiconsIcon({ icon: ArrowRightDoubleIcon }),
 		label: "转场",
 	},
-	captions: {
-		icon: createHugeiconsIcon({ icon: ClosedCaptionIcon }),
-		label: "字幕",
-	},
-	adjustment: {
-		icon: createHugeiconsIcon({ icon: SlidersHorizontalIcon }),
-		label: "调节",
+	plugins: {
+		icon: createHugeiconsIcon({ icon: PuzzleIcon }),
+		label: "插件",
 	},
 	settings: {
 		icon: createHugeiconsIcon({ icon: Settings01Icon }),
 		label: "设置",
 	},
 } satisfies Record<
-	Tab,
+	StaticTab,
 	{ icon: ElementType<{ className?: string }>; label: string }
 >;
 

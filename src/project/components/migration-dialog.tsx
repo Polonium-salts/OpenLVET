@@ -17,11 +17,11 @@ export function MigrationDialog() {
 	if (!migrationState.isMigrating) return null;
 
 	const title = migrationState.projectName
-		? "Updating project"
-		: "Updating projects";
+		? "正在升级项目工程"
+		: "正在升级项目工程";
 	const description = migrationState.projectName
-		? `Upgrading "${migrationState.projectName}" from v${migrationState.fromVersion} to v${migrationState.toVersion}`
-		: `Upgrading projects from v${migrationState.fromVersion} to v${migrationState.toVersion}`;
+		? `正在将项目 “${migrationState.projectName}” 从版本 v${migrationState.fromVersion} 升级至 v${migrationState.toVersion}...`
+		: `正在将项目从版本 v${migrationState.fromVersion} 升级至 v${migrationState.toVersion}...`;
 
 	return (
 		<Dialog open={true}>

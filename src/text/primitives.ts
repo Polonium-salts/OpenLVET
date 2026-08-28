@@ -25,16 +25,21 @@ export interface TextLayoutParams {
 	textDecoration?: TextDecoration;
 	letterSpacing?: number;
 	lineHeight?: number;
+	autoWrap?: boolean;
+	boxWidth?: number;
 }
 
 export interface ResolvedTextLayout {
 	scaledFontSize: number;
+	scaledBoxWidth: number;
 	fontString: string;
 	letterSpacing: number;
 	lineHeightPx: number;
 	fontSizeRatio: number;
 	textAlign: TextAlign;
 	textDecoration: TextDecoration;
+	autoWrap: boolean;
+	boxWidth: number;
 }
 
 export interface MeasuredTextLayout extends ResolvedTextLayout {
@@ -86,9 +91,14 @@ export function resolveTextLayout({
 	const lineHeightPx =
 		scaledFontSize * (text.lineHeight ?? DEFAULTS.text.lineHeight);
 	const fontSizeRatio = text.fontSize / 15;
+	const autoWrap = text.autoWrap ?? true;
+	const boxWidth = Math.max(0, text.boxWidth ?? 0);
+	const scaledBoxWidth =
+		boxWidth > 0 ? boxWidth * (canvasHeight / FONT_SIZE_SCALE_REFERENCE) : 0;
 
 	return {
 		scaledFontSize,
+		scaledBoxWidth,
 		fontString: buildTextFontString({
 			fontFamily: text.fontFamily,
 			fontWeight,
@@ -100,7 +110,104 @@ export function resolveTextLayout({
 		fontSizeRatio,
 		textAlign: text.textAlign,
 		textDecoration: text.textDecoration ?? "none",
+		autoWrap,
+		boxWidth,
 	};
+}
+
+export function tokenizeForWrapping(text: string): string[] {
+	if (typeof Intl !== "undefined" && Intl.Segmenter) {
+		try {
+			const segmenter = new Intl.Segmenter(undefined, { granularity: "word" });
+			const segments = Array.from(segmenter.segment(text));
+			return segments.map((s) => s.segment);
+		} catch {
+			// Fall through to regex tokenization if segmenter creation fails
+		}
+	}
+	const regex =
+		/([\u4e00-\u9fa5\u3040-\u30ff\uac00-\ud7af\u1100-\u11ff]|[\s]+|[^\s\u4e00-\u9fa5\u3040-\u30ff\uac00-\ud7af\u1100-\u11ff]+)/gu;
+	return text.match(regex) ?? (text ? [text] : []);
+}
+
+export function wrapTextLines({
+	content,
+	maxWidth,
+	ctx,
+}: {
+	content: string;
+	maxWidth: number;
+	ctx: TextCanvasContext;
+}): string[] {
+	if (maxWidth <= 0 || !Number.isFinite(maxWidth)) {
+		return content.split("\n");
+	}
+
+	const paragraphs = content.split("\n");
+	const resultLines: string[] = [];
+
+	for (const paragraph of paragraphs) {
+		if (!paragraph) {
+			resultLines.push("");
+			continue;
+		}
+
+		const tokens = tokenizeForWrapping(paragraph);
+		let currentLine = "";
+
+		for (let i = 0; i < tokens.length; i++) {
+			const token = tokens[i];
+			const testLine = currentLine ? currentLine + token : token;
+			const testWidth = ctx.measureText(testLine).width;
+
+			if (testWidth <= maxWidth || !currentLine) {
+				if (testWidth <= maxWidth) {
+					currentLine = testLine;
+				} else {
+					// Single token exceeds maxWidth on an empty line; split by character
+					const chars = Array.from(token);
+					for (const char of chars) {
+						const testCharLine = currentLine ? currentLine + char : char;
+						if (currentLine && ctx.measureText(testCharLine).width > maxWidth) {
+							resultLines.push(currentLine);
+							currentLine = char;
+						} else {
+							currentLine = testCharLine;
+						}
+					}
+				}
+			} else {
+				// Current line is full, push it and start a new line
+				resultLines.push(currentLine);
+				const trimmedToken = token.trimStart();
+				if (trimmedToken) {
+					if (ctx.measureText(trimmedToken).width <= maxWidth) {
+						currentLine = trimmedToken;
+					} else {
+						currentLine = "";
+						const chars = Array.from(trimmedToken);
+						for (const char of chars) {
+							const testCharLine = currentLine ? currentLine + char : char;
+							if (currentLine && ctx.measureText(testCharLine).width > maxWidth) {
+								resultLines.push(currentLine);
+								currentLine = char;
+							} else {
+								currentLine = testCharLine;
+							}
+						}
+					}
+				} else {
+					currentLine = "";
+				}
+			}
+		}
+
+		if (currentLine) {
+			resultLines.push(currentLine);
+		}
+	}
+
+	return resultLines.length > 0 ? resultLines : [""];
 }
 
 export function measureTextLayout({
@@ -113,7 +220,6 @@ export function measureTextLayout({
 	ctx: TextCanvasContext;
 }): MeasuredTextLayout {
 	const resolvedLayout = resolveTextLayout({ text, canvasHeight });
-	const lines = text.content.split("\n");
 
 	ctx.save();
 	ctx.font = resolvedLayout.fontString;
@@ -122,6 +228,16 @@ export function measureTextLayout({
 		ctx,
 		letterSpacingPx: resolvedLayout.letterSpacing,
 	});
+
+	const lines =
+		resolvedLayout.autoWrap && resolvedLayout.scaledBoxWidth > 0
+			? wrapTextLines({
+					content: text.content,
+					maxWidth: resolvedLayout.scaledBoxWidth,
+					ctx,
+				})
+			: text.content.split("\n");
+
 	const lineMetrics = lines.map((line) => ctx.measureText(line));
 	ctx.restore();
 

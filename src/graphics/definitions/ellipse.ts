@@ -13,26 +13,26 @@ interface EllipseParams {
 const ELLIPSE_PARAMS: ParamDefinition<keyof EllipseParams & string>[] = [
 	{
 		key: "fill",
-		label: "Fill",
+		label: "填充颜色",
 		type: "color",
 		default: "#ffffff",
 	},
 	{
 		key: "stroke",
-		label: "Color",
+		label: "描边颜色",
 		type: "color",
 		default: "#000000",
 		group: "stroke",
 	},
 	{
 		key: "strokeWidth",
-		label: "Width",
+		label: "描边粗细",
 		type: "number",
 		default: 0,
 		min: 0,
 		max: 64,
 		step: 1,
-		shortLabel: "W",
+		shortLabel: "宽",
 		group: "stroke",
 	},
 	STROKE_ALIGN_PARAM,
@@ -40,8 +40,8 @@ const ELLIPSE_PARAMS: ParamDefinition<keyof EllipseParams & string>[] = [
 
 export const ellipseGraphicDefinition: GraphicDefinition = {
 	id: "ellipse",
-	name: "Ellipse",
-	keywords: ["ellipse", "circle", "oval"],
+	name: "圆形",
+	keywords: ["ellipse", "circle", "oval", "圆形", "椭圆"],
 	params: ELLIPSE_PARAMS,
 	render({ ctx, params, width, height }) {
 		const fill = String(params.fill ?? "#ffffff");

@@ -44,6 +44,7 @@ export interface PlayheadConfig {
 	getActiveProjectFps: () => FrameRate | null;
 	isShiftHeld: () => boolean;
 	getIsPlaying: () => boolean;
+	pause?: () => void;
 	getRulerEl: () => HTMLDivElement | null;
 	getRulerScrollEl: () => HTMLDivElement | null;
 	getTracksScrollEl: () => HTMLDivElement | null;
@@ -129,6 +130,9 @@ export class PlayheadController {
 	onPlayheadMouseDown(event: ReactMouseEvent): void {
 		event.preventDefault();
 		event.stopPropagation();
+		if (this.config.pause && this.config.getIsPlaying()) {
+			this.config.pause();
+		}
 		this.session = {
 			kind: "scrubbing",
 			didStartFromRuler: false,
@@ -145,6 +149,9 @@ export class PlayheadController {
 		if (this.config.getPlayheadEl()?.contains(event.target as Node)) return;
 
 		event.preventDefault();
+		if (this.config.pause && this.config.getIsPlaying()) {
+			this.config.pause();
+		}
 		this.session = {
 			kind: "scrubbing",
 			didStartFromRuler: true,

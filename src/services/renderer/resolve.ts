@@ -17,6 +17,8 @@ import {
 	getTextMeasurementContext,
 	measureTextElement,
 } from "@/text/measure-element";
+import { evaluateTextAnimation } from "@/text/animation/evaluator";
+import type { TextAnimationState } from "@/text/animation/types";
 import { resolveColorAtTime, resolveOpacityAtTime } from "@/animation/values";
 import { resolveTransformAtTime } from "@/rendering/animation-values";
 import { videoCache } from "@/services/video-cache/service";
@@ -39,6 +41,7 @@ import { ImageNode, loadImageSource } from "./nodes/image-node";
 import { StickerNode, loadStickerSource } from "./nodes/sticker-node";
 import { TextNode, type ResolvedTextNodeState } from "./nodes/text-node";
 import { VideoNode } from "./nodes/video-node";
+import { TransitionNode } from "./nodes/transition-node";
 import type {
 	ResolvedVisualNodeState,
 	ResolvedVisualSourceNodeState,
@@ -89,6 +92,8 @@ async function resolveNode({
 		node.resolved = await resolveBlurBackgroundNode({ node, context });
 	} else if (node instanceof EffectLayerNode) {
 		node.resolved = resolveEffectLayerNode({ node, context });
+	} else if (node instanceof TransitionNode) {
+		node.resolved = node.resolve({ time: context.time });
 	}
 
 	await Promise.all(
@@ -333,17 +338,59 @@ function resolveTextNode({
 	});
 	const background = buildTextBackgroundFromElement({ element: node.params });
 
+	const localTimeSeconds = mediaTimeToSeconds({ time: localTime });
+	const totalDurationSeconds = mediaTimeToSeconds({ time: node.params.duration });
+	const rawContent = typeof node.params.params.content === "string" ? node.params.params.content : "";
+	const animationConfig = (node.params.params as any).textAnimation as TextAnimationState | undefined;
+
+	const animEval = evaluateTextAnimation({
+		animation: animationConfig,
+		localTimeSeconds,
+		totalDurationSeconds,
+		fullTextLength: rawContent.length,
+	});
+
+	const baseTransform = resolveTransformAtTime({
+		baseTransform: node.params.transform,
+		animations: node.params.animations,
+		localTime,
+	});
+
+	const baseOpacity = resolveOpacityAtTime({
+		baseOpacity: node.params.opacity,
+		animations: node.params.animations,
+		localTime,
+	});
+
+	// Compose animated transform & opacity
+	const animatedTransform = {
+		position: {
+			x: baseTransform.position.x + animEval.offsetX,
+			y: baseTransform.position.y + animEval.offsetY,
+		},
+		scaleX: baseTransform.scaleX * animEval.scaleX,
+		scaleY: baseTransform.scaleY * animEval.scaleY,
+		rotate: baseTransform.rotate + animEval.rotate,
+	};
+
+	const animatedOpacity = Math.max(0, Math.min(1, baseOpacity * animEval.opacity));
+
+	// If typewriter animation is running, slice content
+	const effectiveElement =
+		animEval.visibleTextLength !== undefined &&
+		animEval.visibleTextLength < rawContent.length
+			? {
+					...node.params,
+					params: {
+						...node.params.params,
+						content: rawContent.slice(0, animEval.visibleTextLength),
+					},
+				}
+			: node.params;
+
 	return {
-		transform: resolveTransformAtTime({
-			baseTransform: node.params.transform,
-			animations: node.params.animations,
-			localTime,
-		}),
-		opacity: resolveOpacityAtTime({
-			baseOpacity: node.params.opacity,
-			animations: node.params.animations,
-			localTime,
-		}),
+		transform: animatedTransform,
+		opacity: animatedOpacity,
 		textColor: resolveColorAtTime({
 			baseColor:
 				typeof node.params.params.color === "string"
@@ -367,7 +414,7 @@ function resolveTextNode({
 			height: context.renderer.height,
 		}),
 		measuredText: measureTextElement({
-			element: node.params,
+			element: effectiveElement,
 			canvasHeight: node.params.canvasHeight,
 			localTime,
 			ctx: getTextMeasurementContext(),

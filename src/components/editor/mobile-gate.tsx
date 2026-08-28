@@ -43,25 +43,23 @@ export function MobileGate({ children }: MobileGateProps) {
 				onClick={handleGoBack}
 			>
 				<HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
-				<span className=" text-sm">Go back</span>
+				<span className=" text-sm">返回</span>
 			</Button>
 
 			<div className="flex flex-1 flex-col justify-center gap-5 px-7">
 				<div className="flex flex-col gap-3">
 					<h1 className="text-foreground text-3xl font-bold tracking-tight">
-						Desktop only (for now)
+						推荐使用电脑桌面端访问
 					</h1>
 					<p className="text-muted-foreground text-sm leading-relaxed">
-						OpenLVET isn't optimized for mobile or iPad yet. Things will break
-						and the layout will be a mess. Come back on a desktop for the real
-						experience.
+						OpenLVET 剪辑工作台包含多轨道时间线与实时预览，推荐使用电脑浏览器（Chrome / Edge 等）大屏体验。
 					</p>
 				</div>
 				<div className="flex items-center gap-3">
-					<Button onClick={handleContinue}>Take a look anyway</Button>
+					<Button onClick={handleContinue}>仍然继续体验</Button>
 					<Button variant="ghost" asChild>
 						<Link href="/roadmap" className="flex items-center gap-1">
-							Roadmap
+							更新路线图
 							<HugeiconsIcon icon={ArrowRight01Icon} size={14} />
 						</Link>
 					</Button>

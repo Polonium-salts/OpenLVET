@@ -31,8 +31,10 @@ export function RenameProjectDialog({
 		onOpenChange(open);
 	};
 
+	if (!isOpen) return null;
+
 	return (
-		<Dialog open={isOpen} onOpenChange={handleOpenChange}>
+		<Dialog open={true} onOpenChange={handleOpenChange}>
 			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>重命名项目</DialogTitle>

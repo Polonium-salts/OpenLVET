@@ -2,6 +2,23 @@ import type { EffectDefinition, EffectPass } from "@/effects/types";
 
 export const GAUSSIAN_BLUR_SHADER = "gaussian-blur";
 
+export const BLUR_GLSL = `
+uniform float u_sigma;
+uniform vec2 u_direction;
+
+vec4 filterPixel(vec2 uv) {
+  vec2 stepSize = (u_direction * max(1.0, u_sigma * 0.35)) / u_resolution;
+  vec4 color = vec4(0.0);
+  float totalWeight = 0.0;
+  for (float i = -4.0; i <= 4.0; i += 1.0) {
+    float weight = exp(-0.5 * (i * i) / max(0.1, u_sigma * 0.5));
+    color += getSourceColor(uv + i * stepSize) * weight;
+    totalWeight += weight;
+  }
+  return color / max(0.0001, totalWeight);
+}
+`;
+
 const MAX_SINGLE_PASS_SIGMA = 10;
 const MAX_STEP = 4;
 const MAX_EFFECTIVE_SIGMA = MAX_SINGLE_PASS_SIGMA * MAX_STEP;
@@ -36,6 +53,7 @@ export function buildGaussianBlurPasses({
 	for (let i = 0; i < iterations; i++) {
 		passes.push({
 			shader: GAUSSIAN_BLUR_SHADER,
+			glsl: BLUR_GLSL,
 			uniforms: {
 				u_sigma: perPassSigmaX,
 				u_step: stepX,
@@ -44,6 +62,7 @@ export function buildGaussianBlurPasses({
 		});
 		passes.push({
 			shader: GAUSSIAN_BLUR_SHADER,
+			glsl: BLUR_GLSL,
 			uniforms: {
 				u_sigma: perPassSigmaY,
 				u_step: stepY,
@@ -67,12 +86,15 @@ function parseIntensity(effectParams: Record<string, unknown>): number {
 
 export const blurEffectDefinition: EffectDefinition = {
 	type: "blur",
-	name: "Blur",
-	keywords: ["blur", "soft", "defocus"],
+	name: "高斯模糊",
+	category: "lighting",
+	icon: "🌫️",
+	description: "多通道平滑高斯模糊与背景柔焦虚化",
+	keywords: ["blur", "soft", "defocus", "模糊", "虚化", "柔焦"],
 	params: [
 		{
 			key: "intensity",
-			label: "Intensity",
+			label: "模糊强度",
 			type: "number",
 			default: 15,
 			min: 0,

@@ -55,6 +55,8 @@ export function useElementInteraction({
 		},
 		playback: {
 			getCurrentTime: () => editor.playback.getCurrentTime(),
+			getIsPlaying: () => editor.playback.getIsPlaying(),
+			pause: () => editor.playback.pause(),
 		},
 		timeline: {
 			moveElements: (args) => editor.timeline.moveElements(args),

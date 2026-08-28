@@ -22,7 +22,6 @@ import { useEditor } from "@/editor/use-editor";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";
-import { ChangelogNotification } from "@/changelog/components/changelog-notification";
 import {
 	createPreviewOverlayControl,
 	isPreviewOverlayVisible,
@@ -34,6 +33,9 @@ import {
 	bookmarkNotesPreviewOverlay,
 	getBookmarkPreviewOverlaySource,
 } from "@/timeline/bookmarks/index";
+import { usePluginStore } from "@/plugins/plugin-store";
+import { PluginCenterDialog } from "@/plugins/components/plugin-center-dialog";
+import { PluginSettingsDialog } from "@/plugins/components/plugin-settings-dialog";
 
 export default function Editor() {
 	const params = useParams();
@@ -50,7 +52,8 @@ export default function Editor() {
 					</div>
 					<Onboarding />
 					<MigrationDialog />
-					<ChangelogNotification />
+					<PluginCenterDialog />
+					<PluginSettingsDialog />
 				</div>
 			</EditorProvider>
 		</MobileGate>
@@ -94,28 +97,47 @@ function EditorLayout() {
 		overlay: bookmarkNotesPreviewOverlay,
 		overlays,
 	});
-
-	const overlaySource = useMemo(
-		() =>
-			mergePreviewOverlaySources({
-				sources: [
-					getGuidePreviewOverlaySource({
-						guideId: activeGuide,
-					}),
-					activeScene
-						? getBookmarkPreviewOverlaySource({
-								bookmarks: activeScene.bookmarks,
-								time: currentTime,
-								isVisible: showBookmarkNotes,
-							})
-						: {
-								definitions: [bookmarkNotesPreviewOverlay],
-								instances: [],
-							},
-				],
-			}),
-		[activeGuide, activeScene, currentTime, showBookmarkNotes],
+	const dynamicOverlayProviders = usePluginStore(
+		(state) => state.dynamicOverlayProviders,
 	);
+
+	const overlaySource = useMemo(() => {
+		const baseSources = [
+			getGuidePreviewOverlaySource({
+				guideId: activeGuide,
+			}),
+			activeScene
+				? getBookmarkPreviewOverlaySource({
+						bookmarks: activeScene.bookmarks,
+						time: currentTime,
+						isVisible: showBookmarkNotes,
+					})
+				: {
+						definitions: [bookmarkNotesPreviewOverlay],
+						instances: [],
+					},
+		];
+
+		// Include plugin-registered dynamic preview overlays
+		const pluginSources = Object.values(dynamicOverlayProviders).map((fn) => {
+			try {
+				return fn();
+			} catch (e) {
+				console.error("Error evaluating plugin overlay source:", e);
+				return { definitions: [], instances: [] };
+			}
+		});
+
+		return mergePreviewOverlaySources({
+			sources: [...baseSources, ...pluginSources],
+		});
+	}, [
+		activeGuide,
+		activeScene,
+		currentTime,
+		showBookmarkNotes,
+		dynamicOverlayProviders,
+	]);
 
 	const overlayControls = useMemo(
 		() =>

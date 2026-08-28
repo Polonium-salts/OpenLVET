@@ -136,7 +136,7 @@ function PlayerControls() {
 				variant="ghost"
 				size="icon"
 				className="size-8 text-muted-foreground hover:text-foreground"
-				onClick={() => invokeAction("step-backward")}
+				onClick={() => invokeAction("frame-step-backward")}
 				title="上一帧 (←)"
 			>
 				<HugeiconsIcon icon={PreviousIcon} className="size-3.5" />
@@ -156,7 +156,7 @@ function PlayerControls() {
 				variant="ghost"
 				size="icon"
 				className="size-8 text-muted-foreground hover:text-foreground"
-				onClick={() => invokeAction("step-forward")}
+				onClick={() => invokeAction("frame-step-forward")}
 				title="下一帧 (→)"
 			>
 				<HugeiconsIcon icon={NextIcon} className="size-3.5" />

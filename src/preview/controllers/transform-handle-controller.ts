@@ -26,6 +26,7 @@ import type { ElementAnimations } from "@/animation/types";
 import type { ParamValues } from "@/params";
 import { buildTransformFromParams, type Transform } from "@/rendering";
 import { resolveTransformAtTime } from "@/rendering/animation-values";
+import { FONT_SIZE_SCALE_REFERENCE } from "@/text/typography";
 import type {
 	ElementRef,
 	SceneTracks,
@@ -47,6 +48,7 @@ interface CornerScaleSession extends CapturedPointerState {
 	readonly corner: Corner;
 	readonly trackId: string;
 	readonly elementId: string;
+	readonly elementType: TimelineElement["type"];
 	readonly initialTransform: Transform;
 	readonly initialParams: ParamValues;
 	readonly initialDistance: number;
@@ -63,6 +65,7 @@ interface EdgeScaleSession extends CapturedPointerState {
 	readonly edge: Edge;
 	readonly trackId: string;
 	readonly elementId: string;
+	readonly elementType: TimelineElement["type"];
 	readonly initialTransform: Transform;
 	readonly initialParams: ParamValues;
 	readonly initialBoundsCx: number;
@@ -372,6 +375,7 @@ export class TransformHandleController {
 			corner,
 			trackId: context.trackId,
 			elementId: context.elementId,
+			elementType: context.element.type,
 			initialTransform: context.resolvedTransform,
 			initialParams: context.element.params,
 			initialDistance: getCornerDistance({
@@ -452,6 +456,7 @@ export class TransformHandleController {
 			edge,
 			trackId: context.trackId,
 			elementId: context.elementId,
+			elementType: context.element.type,
 			initialTransform: context.resolvedTransform,
 			initialParams: context.element.params,
 			initialBoundsCx: context.bounds.cx,
@@ -612,6 +617,18 @@ export class TransformHandleController {
 
 		this.deps.preview.onSnapLinesChange?.(activeLines);
 
+		const isText = session.elementType === "text";
+		const newScaleX = isText
+			? clampScaleNonZero(
+					((session.initialTransform.scaleX + session.initialTransform.scaleY) /
+						2) *
+						snappedScale,
+				)
+			: clampScaleNonZero(session.initialTransform.scaleX * snappedScale);
+		const newScaleY = isText
+			? newScaleX
+			: clampScaleNonZero(session.initialTransform.scaleY * snappedScale);
+
 		this.deps.timeline.previewElements([
 			{
 				trackId: session.trackId,
@@ -621,12 +638,8 @@ export class TransformHandleController {
 						params: session.initialParams,
 						transform: {
 							...session.initialTransform,
-							scaleX: clampScaleNonZero(
-								session.initialTransform.scaleX * snappedScale,
-							),
-							scaleY: clampScaleNonZero(
-								session.initialTransform.scaleY * snappedScale,
-							),
+							scaleX: newScaleX,
+							scaleY: newScaleY,
 						},
 					}),
 					...(session.shouldClearScaleAnimation && {
@@ -652,6 +665,37 @@ export class TransformHandleController {
 		const yProjection =
 			-deltaX * Math.sin(session.rotationRad) +
 			deltaY * Math.cos(session.rotationRad);
+
+		if (
+			session.elementType === "text" &&
+			(session.edge === "right" || session.edge === "left")
+		) {
+			const projection = session.edge === "right" ? xProjection : -xProjection;
+			const targetScaledWidth = Math.max(20, Math.abs(projection * 2));
+			const canvasHeight = this.deps.scene.getCanvasSize().height;
+			const fontScale = canvasHeight / FONT_SIZE_SCALE_REFERENCE;
+			const effectiveScaleX = Math.abs(session.initialTransform.scaleX) || 1;
+			const newBoxWidth = Math.max(
+				10,
+				Math.round(targetScaledWidth / (effectiveScaleX * fontScale)),
+			);
+
+			this.deps.timeline.previewElements([
+				{
+					trackId: session.trackId,
+					elementId: session.elementId,
+					updates: {
+						params: {
+							...session.initialParams,
+							autoWrap: true,
+							boxWidth: newBoxWidth,
+						},
+					},
+				},
+			]);
+			return;
+		}
+
 		const projection =
 			session.edge === "right"
 				? xProjection

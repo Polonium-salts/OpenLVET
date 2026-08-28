@@ -23,6 +23,7 @@ export function ThemeToggle({
 		<Button
 			size="icon"
 			variant="ghost"
+			title={theme === "dark" ? "切换至浅色模式" : "切换至深色模式"}
 			className={cn("size-8", className)}
 			onClick={(e) => {
 				setTheme(theme === "dark" ? "light" : "dark");
@@ -33,7 +34,7 @@ export function ThemeToggle({
 				icon={Sun03Icon}
 				className={cn("!size-[1.1rem]", iconClassName)}
 			/>
-			<span className="sr-only">{theme === "dark" ? "Light" : "Dark"}</span>
+			<span className="sr-only">{theme === "dark" ? "切换至浅色模式" : "切换至深色模式"}</span>
 		</Button>
 	);
 }

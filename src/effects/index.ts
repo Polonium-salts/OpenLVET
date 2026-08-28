@@ -1,9 +1,17 @@
 import { generateUUID } from "@/utils/id";
-import { buildDefaultParamValues } from "@/params/registry";
 import { effectsRegistry } from "./registry";
-import type { ParamValues } from "@/params";
+import type { ParamValues, ParamDefinition } from "@/params";
 import type { Effect, EffectDefinition, EffectPass } from "@/effects/types";
-import { VISUAL_ELEMENT_TYPES } from "@/timeline";
+
+export function buildDefaultParamValues(
+	params: readonly ParamDefinition[],
+): ParamValues {
+	const values: ParamValues = {};
+	for (const param of params) {
+		values[param.key] = param.default;
+	}
+	return values;
+}
 
 export { effectsRegistry } from "./registry";
 export { registerDefaultEffects } from "./definitions";
@@ -24,11 +32,12 @@ export function resolveEffectPasses({
 	}
 	return definition.renderer.passes.map((pass) => ({
 		shader: pass.shader,
+		glsl: pass.glsl,
 		uniforms: pass.uniforms({ effectParams, width, height }),
 	}));
 }
 
-export const EFFECT_TARGET_ELEMENT_TYPES = VISUAL_ELEMENT_TYPES;
+export const EFFECT_TARGET_ELEMENT_TYPES = ["video", "image", "text", "graphic"] as const;
 
 export function buildDefaultEffectInstance({
 	effectType,

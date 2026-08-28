@@ -2,14 +2,14 @@ import type { ShortcutKey } from "@/actions/keybinding";
 import type { TActionWithOptionalArgs } from "./types";
 
 export type TActionCategory =
-	| "playback"
-	| "navigation"
-	| "editing"
-	| "selection"
-	| "history"
-	| "timeline"
-	| "controls"
-	| "assets";
+	| "播放控制"
+	| "时间导航"
+	| "剪辑操作"
+	| "选择与多选"
+	| "历史记录"
+	| "时间线标记"
+	| "基础控制"
+	| "资产管理";
 
 export interface TActionBaseDefinition {
 	description: string;
@@ -23,129 +23,129 @@ export interface TActionDefinition extends TActionBaseDefinition {
 
 export const ACTIONS = {
 	"toggle-play": {
-		description: "Play/Pause",
-		category: "playback",
+		description: "播放 / 暂停",
+		category: "播放控制",
 	},
 	"stop-playback": {
-		description: "Stop playback",
-		category: "playback",
+		description: "停止播放",
+		category: "播放控制",
 	},
 	"seek-forward": {
-		description: "Seek forward 1 second",
-		category: "playback",
+		description: "快进 1 秒",
+		category: "播放控制",
 		args: { seconds: "number" },
 	},
 	"seek-backward": {
-		description: "Seek backward 1 second",
-		category: "playback",
+		description: "快退 1 秒",
+		category: "播放控制",
 		args: { seconds: "number" },
 	},
 	"frame-step-forward": {
-		description: "Frame step forward",
-		category: "navigation",
+		description: "向前一帧",
+		category: "时间导航",
 	},
 	"frame-step-backward": {
-		description: "Frame step backward",
-		category: "navigation",
+		description: "向后一帧",
+		category: "时间导航",
 	},
 	"jump-forward": {
-		description: "Jump forward 5 seconds",
-		category: "navigation",
+		description: "快进 5 秒",
+		category: "时间导航",
 		args: { seconds: "number" },
 	},
 	"jump-backward": {
-		description: "Jump backward 5 seconds",
-		category: "navigation",
+		description: "快退 5 秒",
+		category: "时间导航",
 		args: { seconds: "number" },
 	},
 	"goto-start": {
-		description: "Go to timeline start",
-		category: "navigation",
+		description: "跳至时间线起点",
+		category: "时间导航",
 	},
 	"goto-end": {
-		description: "Go to timeline end",
-		category: "navigation",
+		description: "跳至时间线终点",
+		category: "时间导航",
 	},
 	split: {
-		description: "Split elements at playhead",
-		category: "editing",
+		description: "在播放头处分割片段",
+		category: "剪辑操作",
 	},
 	"split-left": {
-		description: "Split and remove left",
-		category: "editing",
+		description: "分割并删除左侧片段",
+		category: "剪辑操作",
 	},
 	"split-right": {
-		description: "Split and remove right",
-		category: "editing",
+		description: "分割并删除右侧片段",
+		category: "剪辑操作",
 	},
 	"delete-selected": {
-		description: "Delete current selection",
-		category: "editing",
+		description: "删除选中的片段",
+		category: "剪辑操作",
 	},
 	"copy-selected": {
-		description: "Copy selected elements",
-		category: "editing",
+		description: "复制选中的片段",
+		category: "剪辑操作",
 	},
 	"paste-copied": {
-		description: "Paste elements at playhead",
-		category: "editing",
+		description: "在播放头处粘贴片段",
+		category: "剪辑操作",
 	},
 	"toggle-snapping": {
-		description: "Toggle snapping",
-		category: "editing",
+		description: "开启 / 关闭自动吸附",
+		category: "剪辑操作",
 	},
 	"toggle-ripple-editing": {
-		description: "Toggle ripple editing",
-		category: "editing",
+		description: "开启 / 关闭波纹编辑",
+		category: "剪辑操作",
 	},
 	"toggle-source-audio": {
-		description: "Extract or recover source audio",
-		category: "editing",
+		description: "分离或恢复原片音频",
+		category: "剪辑操作",
 	},
 	"select-all": {
-		description: "Select all elements",
-		category: "selection",
+		description: "全选所有片段",
+		category: "选择与多选",
 	},
 	"cancel-interaction": {
-		description: "Cancel current interaction",
-		category: "controls",
+		description: "取消当前交互 / 退出编辑",
+		category: "基础控制",
 	},
 	"deselect-all": {
-		description: "Deselect all elements",
-		category: "selection",
+		description: "取消全选",
+		category: "选择与多选",
 	},
 	"duplicate-selected": {
-		description: "Duplicate selected element",
-		category: "selection",
+		description: "快速创建副本",
+		category: "选择与多选",
 	},
 	"toggle-elements-muted-selected": {
-		description: "Mute/unmute selected elements",
-		category: "selection",
+		description: "静音 / 取消静音选中片段",
+		category: "选择与多选",
 	},
 	"toggle-elements-visibility-selected": {
-		description: "Show/hide selected elements",
-		category: "selection",
+		description: "隐藏 / 显示选中片段",
+		category: "选择与多选",
 	},
 	"toggle-bookmark": {
-		description: "Toggle bookmark at playhead",
-		category: "timeline",
+		description: "在播放头处添加 / 移除标记",
+		category: "时间线标记",
 	},
 	undo: {
-		description: "Undo",
-		category: "history",
+		description: "撤销上一步操作",
+		category: "历史记录",
 	},
 	redo: {
-		description: "Redo",
-		category: "history",
+		description: "重做下一步操作",
+		category: "历史记录",
 	},
 	"remove-media-asset": {
-		description: "Remove media asset",
-		category: "assets",
+		description: "移除媒体素材",
+		category: "资产管理",
 		args: { projectId: "string", assetId: "string" },
 	},
 	"remove-media-assets": {
-		description: "Remove media assets",
-		category: "assets",
+		description: "批量移除媒体素材",
+		category: "资产管理",
 		args: { projectId: "string", assetIds: "string[]" },
 	},
 } as const satisfies Record<string, TActionBaseDefinition>;
@@ -207,4 +207,10 @@ export function getDefaultShortcuts(): Map<
 	}
 
 	return shortcuts;
+}
+
+export function isActionWithOptionalArgs(
+	value: string,
+): value is TActionWithOptionalArgs {
+	return value in ACTIONS;
 }

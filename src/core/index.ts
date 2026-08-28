@@ -13,6 +13,7 @@ import { DiagnosticsManager } from "./managers/diagnostics-manager";
 import { registerDefaultEffects } from "@/effects";
 import { registerDefaultMasks } from "@/masks";
 import { registerTranscriptionDiagnostics } from "@/transcription/diagnostics";
+import { pluginManager } from "@/plugins/plugin-manager";
 
 export class EditorCore {
 	private static instance: EditorCore | null = null;
@@ -66,6 +67,13 @@ export class EditorCore {
 			}
 		});
 		this.save.start();
+
+		// Initialize modular plugin system
+		try {
+			pluginManager.init(this);
+		} catch (err) {
+			console.error("Failed to initialize plugin manager in EditorCore:", err);
+		}
 	}
 
 	static getInstance(): EditorCore {

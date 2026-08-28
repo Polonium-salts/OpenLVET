@@ -41,8 +41,10 @@ export function ProjectInfoDialog({
 		? (formatTimecode({ time: project.duration, format: durationSeconds >= 3600 ? "HH:MM:SS" : "MM:SS" }) ?? "")
 		: "0:00";
 
+	if (!isOpen) return null;
+
 	return (
-		<Dialog open={isOpen} onOpenChange={onOpenChange}>
+		<Dialog open={true} onOpenChange={onOpenChange}>
 			<DialogContent onOpenAutoFocus={(event) => event.preventDefault()}>
 				<DialogHeader>
 					<DialogTitle className="truncate max-w-[350px]">

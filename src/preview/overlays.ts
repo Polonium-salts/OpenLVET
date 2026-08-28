@@ -95,10 +95,17 @@ export function mergePreviewOverlaySources({
 	const instances: PreviewOverlayInstance[] = [];
 
 	for (const source of sources) {
-		for (const definition of source.definitions) {
-			definitionsById.set(definition.id, definition);
+		if (!source) continue;
+		if (Array.isArray(source.definitions)) {
+			for (const definition of source.definitions) {
+				if (definition && definition.id) {
+					definitionsById.set(definition.id, definition);
+				}
+			}
 		}
-		instances.push(...source.instances);
+		if (Array.isArray(source.instances)) {
+			instances.push(...source.instances);
+		}
 	}
 
 	return {

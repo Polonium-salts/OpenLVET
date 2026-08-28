@@ -1,6 +1,5 @@
 import type { NextConfig } from "next";
 import { withBotId } from "botid/next/config";
-import { withContentCollections } from "@content-collections/next";
 
 const nextConfig: NextConfig = {
 	compiler: {
@@ -79,8 +78,29 @@ const nextConfig: NextConfig = {
 				protocol: "https",
 				hostname: "upload.wikimedia.org",
 			},
+			{
+				protocol: "https",
+				hostname: "i0.hdslb.com",
+			},
+			{
+				protocol: "https",
+				hostname: "i1.hdslb.com",
+			},
+			{
+				protocol: "https",
+				hostname: "i2.hdslb.com",
+			},
+			{
+				protocol: "https",
+				hostname: "*.hdslb.com",
+			},
+			{
+				protocol: "https",
+				hostname: "*.bilibili.com",
+			},
 		],
 	},
 };
 
-export default withContentCollections(withBotId(nextConfig));
+export default withBotId(nextConfig);
+

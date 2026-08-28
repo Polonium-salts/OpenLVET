@@ -13,6 +13,7 @@ import {
 } from "@/utils/math";
 import { SectionField } from "@/components/section";
 import { NumberField } from "@/components/ui/number-field";
+import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { ColorPicker } from "@/components/ui/color-picker";
 import {
@@ -258,10 +259,20 @@ function NumberParamField({
 			max !== undefined ? Math.min(max, nextDisplayValue) : nextDisplayValue,
 		);
 
+	const [isDraggingSlider, setIsDraggingSlider] = useState(false);
+	const [sliderDisplayValue, setSliderDisplayValue] = useState(displayValue);
+
+	useEffect(() => {
+		if (!isDraggingSlider) {
+			setSliderDisplayValue(displayValue);
+		}
+	}, [displayValue, isDraggingSlider]);
+
 	const previewFromDisplay = (displayVal: number) => {
 		const clamped = clampDisplayValue(
 			snapToStep({ value: displayVal, step }),
 		);
+		setSliderDisplayValue(clamped);
 		onPreview(clamped / displayMultiplier);
 	};
 
@@ -269,7 +280,7 @@ function NumberParamField({
 
 	const draft = usePropertyDraft({
 		displayValue: formatNumberForDisplay({
-			value: displayValue,
+			value: isDraggingSlider ? sliderDisplayValue : displayValue,
 			maxFractionDigits,
 		}),
 		parse: (input) => {
@@ -277,14 +288,85 @@ function NumberParamField({
 			if (Number.isNaN(parsed)) return null;
 			return clampDisplayValue(snapToStep({ value: parsed, step }));
 		},
-		onPreview: previewFromDisplay,
-		onCommit,
+		onPreview: (nextVal) => {
+			setSliderDisplayValue(nextVal);
+			previewFromDisplay(nextVal);
+		},
+		onCommit: () => {
+			setIsDraggingSlider(false);
+			onCommit();
+		},
 	});
 
 	const handleReset = () => {
+		setIsDraggingSlider(false);
 		onPreview(param.default);
 		onCommit();
 	};
+
+	const hasSlider =
+		param.key === "volume" ||
+		param.key === "opacity" ||
+		param.key.endsWith(".opacity") ||
+		(param.min !== undefined &&
+			param.max !== undefined &&
+			param.max - param.min <= 100 &&
+			!param.key.includes("position") &&
+			!param.key.includes("rotate"));
+
+	if (hasSlider && min !== undefined && max !== undefined) {
+		const currentSliderVal = isDraggingSlider
+			? sliderDisplayValue
+			: clampDisplayValue(displayValue);
+
+		return (
+			<div className="flex items-center gap-2.5 w-full">
+				<div className="flex-1 min-w-[70px]">
+					<Slider
+						min={min}
+						max={max}
+						step={step}
+						value={[currentSliderVal]}
+						onValueChange={([val]) => {
+							if (val !== undefined) {
+								setIsDraggingSlider(true);
+								setSliderDisplayValue(val);
+								previewFromDisplay(val);
+							}
+						}}
+						onValueCommit={([val]) => {
+							setIsDraggingSlider(false);
+							if (val !== undefined) {
+								previewFromDisplay(val);
+							}
+							onCommit();
+						}}
+						className="cursor-pointer"
+					/>
+				</div>
+				<div className="w-20 shrink-0">
+					<NumberField
+						icon={param.shortLabel}
+						value={draft.displayValue}
+						dragSensitivity="slow"
+						isDefault={value === param.default}
+						onFocus={draft.onFocus}
+						onChange={draft.onChange}
+						onBlur={draft.onBlur}
+						onScrub={(val) => {
+							setIsDraggingSlider(true);
+							previewFromDisplay(val);
+						}}
+						onScrubEnd={() => {
+							setIsDraggingSlider(false);
+							onCommit();
+						}}
+						onReset={handleReset}
+					/>
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<NumberField

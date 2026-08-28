@@ -40,6 +40,8 @@ export function useTimelineSeek({
 		getRulerScrollEl: () => rulerScrollRef.current,
 		getTracksScrollEl: () => tracksScrollRef.current,
 		getActiveProjectFps: () => editor.project.getActive()?.settings.fps ?? null,
+		getIsPlaying: () => editor.playback.getIsPlaying(),
+		pause: () => editor.playback.pause(),
 		clearSelectedElements,
 		seek,
 		setTimelineViewState: ({ zoomLevel, scrollLeft, playheadTime }) =>

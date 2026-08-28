@@ -25,7 +25,7 @@ async function getAllBilibiliStickers(): Promise<BilibiliStickerItemDto[]> {
 
 	clientFetchPromise = (async () => {
 		try {
-			const res = await fetch("/api/stickers/bilibili?limit=500");
+			const res = await fetch("/api/stickers/bilibili?limit=50000");
 			const data = await res.json();
 			clientCache = (data.items as BilibiliStickerItemDto[]) || [];
 			return clientCache;
@@ -58,8 +58,18 @@ function toStickerItem(providerId: string, item: BilibiliStickerItemDto): Sticke
 	};
 }
 
+export type BilibiliCategoryType =
+	| "trending"
+	| "yellow_face"
+	| "bili_girls"
+	| "moe_pet"
+	| "game"
+	| "vup"
+	| "anime"
+	| "meme";
+
 export function createBilibiliCategoryStickerProvider(
-	categoryId: "trending" | "yellow_face" | "bili_girls" | "moe_pet" | "anime" | "meme",
+	categoryId: BilibiliCategoryType,
 ): StickerProvider {
 	return {
 		id: categoryId,
@@ -75,7 +85,9 @@ export function createBilibiliCategoryStickerProvider(
 
 			let filtered = list;
 			if (categoryId === "trending") {
-				filtered = list.filter((s) => [1, 2, 5, 6, 9, 25, 53].includes(s.packageId));
+				filtered = list.filter((s) =>
+					[1, 2, 5, 6, 9, 25, 84, 97, 139, 245, 490, 852].includes(s.packageId),
+				);
 			} else {
 				filtered = list.filter((s) => s.category === categoryId);
 			}
@@ -107,7 +119,9 @@ export function createBilibiliCategoryStickerProvider(
 
 			let filtered = list;
 			if (categoryId === "trending") {
-				filtered = list.filter((s) => [1, 2, 5, 6, 9, 25, 53].includes(s.packageId));
+				filtered = list.filter((s) =>
+					[1, 2, 5, 6, 9, 25, 84, 97, 139, 245, 490, 852].includes(s.packageId),
+				);
 			} else {
 				filtered = list.filter((s) => s.category === categoryId);
 			}
@@ -137,6 +151,8 @@ export const bilibiliTrendingProvider = createBilibiliCategoryStickerProvider("t
 export const bilibiliYellowFaceProvider = createBilibiliCategoryStickerProvider("yellow_face");
 export const bilibiliGirlsProvider = createBilibiliCategoryStickerProvider("bili_girls");
 export const bilibiliMoePetProvider = createBilibiliCategoryStickerProvider("moe_pet");
+export const bilibiliGameProvider = createBilibiliCategoryStickerProvider("game");
+export const bilibiliVupProvider = createBilibiliCategoryStickerProvider("vup");
 export const bilibiliAnimeProvider = createBilibiliCategoryStickerProvider("anime");
 export const bilibiliMemeProvider = createBilibiliCategoryStickerProvider("meme");
 

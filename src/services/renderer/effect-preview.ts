@@ -102,12 +102,32 @@ class EffectPreviewService {
 		const isImageReady =
 			this.previewImageElement?.complete &&
 			(this.previewImageElement.naturalWidth ?? 0) > 0;
-		if (!isImageReady || !this.previewImageElement) {
-			return null;
-		}
 
 		const { canvas, context } = createCanvasSurface({ width, height });
-		context.drawImage(this.previewImageElement, 0, 0, width, height);
+		if (isImageReady && this.previewImageElement) {
+			context.drawImage(this.previewImageElement, 0, 0, width, height);
+		} else {
+			// Rich procedural test pattern with vibrant colors and geometric details
+			const grad = context.createLinearGradient(0, 0, width, height);
+			grad.addColorStop(0, "#3b82f6");
+			grad.addColorStop(0.5, "#8b5cf6");
+			grad.addColorStop(1, "#ec4899");
+			context.fillStyle = grad;
+			context.fillRect(0, 0, width, height);
+
+			context.fillStyle = "rgba(255, 255, 255, 0.9)";
+			context.beginPath();
+			context.arc(width * 0.5, height * 0.45, width * 0.22, 0, Math.PI * 2);
+			context.fill();
+
+			context.fillStyle = "#fbbf24";
+			context.beginPath();
+			context.arc(width * 0.75, height * 0.65, width * 0.16, 0, Math.PI * 2);
+			context.fill();
+
+			context.fillStyle = "#10b981";
+			context.fillRect(width * 0.15, height * 0.6, width * 0.25, height * 0.25);
+		}
 		return canvas;
 	}
 

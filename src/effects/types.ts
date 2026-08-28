@@ -7,15 +7,17 @@ export interface Effect {
 	enabled: boolean;
 }
 
-export type EffectUniformValue = number | number[];
+export type EffectUniformValue = number | number[] | boolean;
 
 export interface EffectPass {
 	shader: string;
 	uniforms: Record<string, EffectUniformValue>;
+	glsl?: string;
 }
 
 export interface EffectPassTemplate {
 	shader: string;
+	glsl?: string;
 	uniforms(params: {
 		effectParams: ParamValues;
 		width: number;
@@ -32,10 +34,22 @@ export interface EffectRendererConfig {
 	}) => EffectPass[];
 }
 
+export type EffectCategory =
+	| "all"
+	| "color"
+	| "lighting"
+	| "distortion"
+	| "retro"
+	| "glitch";
+
 export interface EffectDefinition {
 	type: string;
 	name: string;
+	category?: EffectCategory;
+	icon?: string;
+	description?: string;
 	keywords: string[];
 	params: ParamDefinition[];
 	renderer: EffectRendererConfig;
 }
+

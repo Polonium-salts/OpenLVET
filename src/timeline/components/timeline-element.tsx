@@ -427,7 +427,7 @@ export function TimelineElement({
 						action="split"
 						icon={<HugeiconsIcon icon={ScissorIcon} />}
 					>
-						Split
+						分割
 					</ActionMenuItem>
 					<CopyMenuItem />
 					{selectedElements.length === 1 && (
@@ -435,7 +435,7 @@ export function TimelineElement({
 							action="duplicate-selected"
 							icon={<HugeiconsIcon icon={Copy01Icon} />}
 						>
-							Duplicate
+							创建副本
 						</ActionMenuItem>
 					)}
 					{canElementHaveAudio(element) && hasAudio && (
@@ -459,7 +459,7 @@ export function TimelineElement({
 								invokeAction("toggle-source-audio");
 							}}
 						>
-							{sourceAudioLabel}
+							{sourceAudioLabel === "Extract audio" ? "分离音轨" : sourceAudioLabel}
 						</ContextMenuItem>
 					)}
 					{canElementBeHidden(element) && (
@@ -477,7 +477,7 @@ export function TimelineElement({
 								toggleElementExpanded(element.id);
 							}}
 						>
-							{isExpanded ? "Collapse keyframes" : "Expand keyframes"}
+							{isExpanded ? "收起关键帧" : "展开关键帧"}
 						</ContextMenuItem>
 					)}
 					{selectedElements.length === 1 && hasMediaId(element) && (
@@ -488,13 +488,13 @@ export function TimelineElement({
 									handleRevealInMedia({ event })
 								}
 							>
-								Reveal media
+								在资产库中定位
 							</ContextMenuItem>
 							<ContextMenuItem
 								icon={<HugeiconsIcon icon={Exchange01Icon} />}
 								disabled
 							>
-								Replace media
+								替换媒体素材
 							</ContextMenuItem>
 						</>
 					)}
@@ -1187,7 +1187,7 @@ function CopyMenuItem() {
 			action="copy-selected"
 			icon={<HugeiconsIcon icon={Copy01Icon} />}
 		>
-			Copy
+			复制
 		</ActionMenuItem>
 	);
 }
@@ -1214,7 +1214,7 @@ function MuteMenuItem({
 
 	return (
 		<ActionMenuItem action="toggle-elements-muted-selected" icon={getIcon()}>
-			{isMuted ? "Unmute" : "Mute"}
+			{isMuted ? "取消静音" : "静音"}
 		</ActionMenuItem>
 	);
 }
@@ -1246,7 +1246,7 @@ function VisibilityMenuItem({
 			action="toggle-elements-visibility-selected"
 			icon={getIcon()}
 		>
-			{isHidden ? "Show" : "Hide"}
+			{isHidden ? "显示" : "隐藏"}
 		</ActionMenuItem>
 	);
 }
@@ -1269,8 +1269,8 @@ function DeleteMenuItem({
 			icon={<HugeiconsIcon icon={Delete02Icon} />}
 		>
 			{isMultipleSelected && isCurrentElementSelected
-				? `Delete ${selectedCount} elements`
-				: `Delete ${elementType === "text" ? "text" : "clip"}`}
+				? `删除 ${selectedCount} 个片段`
+				: `删除${elementType === "text" ? "文本" : "片段"}`}
 		</ActionMenuItem>
 	);
 }

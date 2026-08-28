@@ -1,6 +1,6 @@
 {
 	"name": "OpenLVET",
-	"description": "A simple but powerful video editor that gets the job done. In your browser.",
+	"description": "极简易用、隐私优先且功能强大的在线智能视频剪辑平台，纯浏览器本地运算。",
 	"display": "standalone",
 	"start_url": "/",
 	"icons": [

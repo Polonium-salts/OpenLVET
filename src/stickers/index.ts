@@ -290,6 +290,24 @@ export async function browseAll({
 		}
 	}
 
+	// Add full library grid section for infinite scrolling in "All" view
+	try {
+		const bilibiliProvider = stickersRegistry.get("bilibili");
+		if (bilibiliProvider) {
+			const fullBrowse = await bilibiliProvider.browse({ options: {} });
+			const allItems = fullBrowse.sections[0]?.items ?? [];
+			if (allItems.length > 0) {
+				sections.push({
+					id: "all_grid",
+					title: "全部表情包广场 (18,000+)",
+					items: allItems,
+					hasMore: false,
+					layout: "grid",
+				});
+			}
+		}
+	} catch {}
+
 	return { sections };
 }
 
@@ -313,7 +331,6 @@ export async function resolveStickerIntrinsicSize({
 }
 
 export { resolveStickerId };
-export { resolveQueryToRegions, getRegionLabel } from "./providers/flags";
 export type {
 	StickerBrowseResult,
 	StickerBrowseSection,

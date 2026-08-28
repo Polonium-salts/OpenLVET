@@ -28,13 +28,13 @@ export function Onboarding() {
 	const getStepTitle = () => {
 		switch (step) {
 			case 0:
-				return "Welcome to OpenLVET Beta! 🎉";
+				return "欢迎体验 OpenLVET！🎉";
 			case 1:
-				return "⚠️ This is a super early beta!";
+				return "🚀 丰富的功能持续演进中";
 			case 2:
-				return "🦋 Have fun testing!";
+				return "✨ 开启您的智能创作之旅！";
 			default:
-				return "OpenLVET Onboarding";
+				return "新手引导";
 		}
 	};
 
@@ -44,10 +44,10 @@ export function Onboarding() {
 				return (
 					<div className="space-y-5">
 						<div className="space-y-3">
-							<Title title="Welcome to OpenLVET Beta! 🎉" />
-							<Description description="You're among the first to try OpenLVET - the powerful open-source video editor." />
+							<Title title="欢迎体验 OpenLVET！🎉" />
+							<Description description="您正在使用 OpenLVET 智能视频剪辑平台——纯本地高速运算、隐私优先且功能强大的专业剪辑工具。" />
 						</div>
-						<NextButton onClick={handleNext}>Next</NextButton>
+						<NextButton onClick={handleNext}>下一步</NextButton>
 					</div>
 				);
 			case 1:
@@ -55,11 +55,10 @@ export function Onboarding() {
 					<div className="space-y-5">
 						<div className="space-y-3">
 							<Title title={getStepTitle()} />
-							<Description description="There's still a ton of things to do to make this editor amazing." />
-							<Description description="A lot of features are still missing. We're working hard to build them out!" />
-							<Description description="If you're curious, check out our roadmap [here](https://openlvet.app/roadmap)" />
+							<Description description="现已支持 B站表情贴纸库、60+精美文本花字模板、高斯模糊与智能蒙版系统。" />
+							<Description description="您可以随时查看我们的更新路线图了解最新规划与进展。" />
 						</div>
-						<NextButton onClick={handleNext}>Next</NextButton>
+						<NextButton onClick={handleNext}>下一步</NextButton>
 					</div>
 				);
 			case 2:
@@ -68,10 +67,10 @@ export function Onboarding() {
 						<div className="space-y-3">
 							<Title title={getStepTitle()} />
 							<Description
-								description={`Join our [Discord](${SOCIAL_LINKS.discord}), chat with cool people and share feedback to help make OpenLVET the best editor ever.`}
+								description="遇到任何问题或有新功能构想，欢迎在右上角点击“意见反馈”随时与我们交流！"
 							/>
 						</div>
-						<NextButton onClick={handleClose}>Finish</NextButton>
+						<NextButton onClick={handleClose}>开始创作</NextButton>
 					</div>
 				);
 			default:
@@ -97,16 +96,15 @@ function Title({ title }: { title: string }) {
 
 function Description({ description }: { description: string }) {
 	return (
-		<div className="text-muted-foreground">
+		<div className="text-muted-foreground text-sm leading-relaxed">
 			<ReactMarkdown
 				components={{
-					p: ({ children }) => <p className="mb-0">{children}</p>,
 					a: ({ href, children }) => (
 						<a
 							href={href}
 							target="_blank"
 							rel="noopener noreferrer"
-							className="text-foreground hover:text-foreground/80 underline"
+							className="text-primary hover:underline"
 						>
 							{children}
 						</a>
@@ -127,7 +125,7 @@ function NextButton({
 	onClick: () => void;
 }) {
 	return (
-		<Button onClick={onClick} variant="default" className="w-full">
+		<Button onClick={onClick} className="w-full">
 			{children}
 			<ArrowRightIcon className="size-4" />
 		</Button>

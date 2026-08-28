@@ -60,6 +60,12 @@ export interface DragDropConfig {
 		elementId: string;
 		effectType: string;
 	}) => void;
+	addTransition?: (args: {
+		trackId: string;
+		fromElementId: string;
+		toElementId: string;
+		type: string;
+	}) => void;
 }
 
 export interface DragDropConfigRef {
@@ -97,6 +103,8 @@ function elementTypeFromDrag({
 			return "sticker";
 		case "effect":
 			return "effect";
+		case "transition":
+			return "video";
 		case "media":
 		case "stock":
 			return dragData.mediaType;
@@ -385,6 +393,56 @@ export class DragDropController {
 			case "stock":
 				this.executeStockDrop({ target, dragData });
 				return;
+			case "transition":
+				this.executeTransitionDrop({ target, dragData });
+				return;
+		}
+	}
+
+	private executeTransitionDrop({
+		target,
+		dragData,
+	}: {
+		target: DropTarget;
+		dragData: Extract<TimelineDragData, { type: "transition" }>;
+	}): void {
+		const tracks = orderedTracks({ sceneTracks: this.config.getSceneTracks() });
+		let track = tracks[target.trackIndex];
+		if (!track || track.type !== "video") {
+			track = tracks.find((t) => t.type === "video");
+		}
+		if (!track || track.type !== "video" || track.elements.length < 2) return;
+
+		const sortedElements = track.elements
+			.slice()
+			.sort((a, b) => a.startTime - b.startTime);
+
+		let bestPair: { fromId: string; toId: string } | null = null;
+		let minDiff = Infinity;
+
+		for (let i = 0; i < sortedElements.length - 1; i++) {
+			const current = sortedElements[i];
+			const next = sortedElements[i + 1];
+			const cutTime = current.startTime + current.duration;
+			const diff = Math.abs(target.xPosition - cutTime);
+
+			if (diff < minDiff) {
+				minDiff = diff;
+				bestPair = { fromId: current.id, toId: next.id };
+			}
+		}
+
+		if (!bestPair && sortedElements.length >= 2) {
+			bestPair = { fromId: sortedElements[0].id, toId: sortedElements[1].id };
+		}
+
+		if (bestPair && this.config.addTransition) {
+			this.config.addTransition({
+				trackId: track.id,
+				fromElementId: bestPair.fromId,
+				toElementId: bestPair.toId,
+				type: dragData.transitionType,
+			});
 		}
 	}
 
@@ -399,8 +457,8 @@ export class DragDropController {
 			raw: {
 				name: dragData.name ?? "",
 				params: {
-					content: dragData.content ?? "",
 					...(dragData.params ?? {}),
+					content: dragData.content ?? "",
 				},
 			},
 			startTime: target.xPosition,

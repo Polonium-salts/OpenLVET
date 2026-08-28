@@ -50,6 +50,7 @@ import { GraphEditorPopover } from "./graph-editor/popover";
 import { PopoverTrigger } from "@/components/ui/popover";
 import { useGraphEditorController } from "./graph-editor/use-controller";
 import { Undo2, Redo2 } from "lucide-react";
+import { DynamicPluginToolbarItems } from "@/plugins/components/plugin-toolbar-items";
 
 export function TimelineToolbar({
 	zoomLevel,
@@ -122,7 +123,7 @@ function ToolbarLeftSection() {
 			? getSourceAudioActionLabel({
 					element: selectedElement.element,
 				})
-			: "Extract audio";
+			: "分离音频";
 	const isSelectedSourceAudioSeparated =
 		selectedElement?.element.type === "video" &&
 		isSourceAudioSeparated({
@@ -255,6 +256,8 @@ function ToolbarLeftSection() {
 						}
 					/>
 				</GraphEditorPopover>
+
+				<DynamicPluginToolbarItems />
 			</TooltipProvider>
 		</div>
 	);

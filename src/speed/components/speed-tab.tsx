@@ -57,6 +57,11 @@ function buildRetime({
 	return buildConstantRetime({ rate, maintainPitch });
 }
 
+import { Slider } from "@/components/ui/slider";
+import { cn } from "@/utils/ui";
+
+const SPEED_PRESETS = [0.2, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0, 5.0];
+
 export function SpeedTab({
 	element,
 	trackId,
@@ -71,6 +76,14 @@ export function SpeedTab({
 	const isPitchPreserveAvailable = canMaintainPitch({ rate });
 	const maintainPitch = element.retime?.maintainPitch ?? false;
 	const pendingRateRef = useRef(rate);
+	const [isDraggingSlider, setIsDraggingSlider] = useState(false);
+	const [sliderRate, setSliderRate] = useState(rate);
+
+	useEffect(() => {
+		if (!isDraggingSlider) {
+			setSliderRate(rate);
+		}
+	}, [rate, isDraggingSlider]);
 
 	const commitRetime = ({
 		rate: nextRate,
@@ -86,24 +99,31 @@ export function SpeedTab({
 		});
 	};
 
+	const previewRate = (nextRate: number) => {
+		const clamped = clampRetimeRate({ rate: snapToStep({ value: nextRate, step: SPEED_STEP }) });
+		pendingRateRef.current = clamped;
+		editor.timeline.previewElements({
+			updates: [
+				{
+					trackId,
+					elementId: element.id,
+					updates: {
+						retime: buildRetime({ rate: clamped, maintainPitch }),
+					},
+				},
+			],
+		});
+	};
+
 	const speedDraft = usePropertyDraft({
 		displayValue: rateToDisplay({ rate }),
 		parse: (input) => parseSpeedInput({ input }),
 		onPreview: (nextRate) => {
-			pendingRateRef.current = nextRate;
-			editor.timeline.previewElements({
-				updates: [
-					{
-						trackId,
-						elementId: element.id,
-						updates: {
-							retime: buildRetime({ rate: nextRate, maintainPitch }),
-						},
-					},
-				],
-			});
+			setSliderRate(nextRate);
+			previewRate(nextRate);
 		},
 		onCommit: () => {
+			setIsDraggingSlider(false);
 			commitRetime({ rate: pendingRateRef.current, maintainPitch });
 		},
 	});
@@ -115,31 +135,88 @@ export function SpeedTab({
 			</SectionHeader>
 			<SectionContent>
 				<SectionFields>
-					<SectionField label="倍速">
-						<NumberField
-							icon={<HugeiconsIcon icon={DashboardSpeed02Icon} />}
-							value={speedDraft.displayValue}
-							suffix="x"
-							scrubRanges={[
-								{ from: 0.01, to: 1, pixelsPerUnit: 160 },
-								{ from: 1, to: 5, pixelsPerUnit: 48 },
-							]}
-							scrubClamp={{ min: MIN_RETIME_RATE, max: MAX_RETIME_RATE }}
-							onFocus={() => {
-								pendingRateRef.current = rate;
-								speedDraft.onFocus();
-							}}
-							onChange={speedDraft.onChange}
-							onBlur={speedDraft.onBlur}
-							onScrub={speedDraft.scrubTo}
-							onScrubEnd={speedDraft.commitScrub}
-							onReset={() =>
-								commitRetime({ rate: DEFAULT_RETIME_RATE, maintainPitch })
-							}
-							isDefault={rate === DEFAULT_RETIME_RATE}
-						/>
-					</SectionField>
-					<div className="flex items-center justify-between">
+					{/* Speed Slider & NumberField Row */}
+					<div className="flex flex-col gap-2.5">
+						<div className="flex items-center justify-between">
+							<span className="text-xs font-medium text-muted-foreground">倍速调节</span>
+							<div className="w-24">
+								<NumberField
+									icon={<HugeiconsIcon icon={DashboardSpeed02Icon} />}
+									value={speedDraft.displayValue}
+									suffix="x"
+									scrubRanges={[
+										{ from: 0.01, to: 1, pixelsPerUnit: 160 },
+										{ from: 1, to: 5, pixelsPerUnit: 48 },
+									]}
+									scrubClamp={{ min: MIN_RETIME_RATE, max: MAX_RETIME_RATE }}
+									onFocus={() => {
+										pendingRateRef.current = rate;
+										speedDraft.onFocus();
+									}}
+									onChange={speedDraft.onChange}
+									onBlur={speedDraft.onBlur}
+									onScrub={speedDraft.scrubTo}
+									onScrubEnd={speedDraft.commitScrub}
+									onReset={() => {
+										setIsDraggingSlider(false);
+										commitRetime({ rate: DEFAULT_RETIME_RATE, maintainPitch });
+									}}
+									isDefault={rate === DEFAULT_RETIME_RATE}
+								/>
+							</div>
+						</div>
+
+						{/* Continuous Speed Slider */}
+						<div className="px-1 py-1">
+							<Slider
+								min={0.1}
+								max={5.0}
+								step={0.05}
+								value={[Math.min(5.0, Math.max(0.1, isDraggingSlider ? sliderRate : rate))]}
+								onValueChange={([val]) => {
+									if (val !== undefined) {
+										setIsDraggingSlider(true);
+										setSliderRate(val);
+										previewRate(val);
+									}
+								}}
+								onValueCommit={([val]) => {
+									setIsDraggingSlider(false);
+									if (val !== undefined) {
+										commitRetime({ rate: val, maintainPitch });
+									}
+								}}
+								className="cursor-pointer"
+							/>
+						</div>
+
+						{/* Quick Preset Buttons */}
+						<div className="flex items-center gap-1 overflow-x-auto pb-1 no-scrollbar">
+							{SPEED_PRESETS.map((preset) => {
+								const isCurrent = Math.abs(rate - preset) < 0.01;
+								return (
+									<button
+										key={preset}
+										type="button"
+										onClick={() => {
+											setIsDraggingSlider(false);
+											commitRetime({ rate: preset, maintainPitch });
+										}}
+										className={cn(
+											"px-2 py-0.5 rounded text-[11px] font-medium transition-all shrink-0 border",
+											isCurrent
+												? "bg-primary text-primary-foreground border-primary shadow-xs"
+												: "bg-muted/40 text-muted-foreground hover:text-foreground hover:bg-muted border-border/40",
+										)}
+									>
+										{preset}x
+									</button>
+								);
+							})}
+						</div>
+					</div>
+
+					<div className="flex items-center justify-between pt-1 border-t border-border/20">
 						<span className="text-sm">随变速调整音调</span>
 						<Switch
 							checked={!maintainPitch}

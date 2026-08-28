@@ -26,8 +26,10 @@ export function DeleteProjectDialog({
 	const isSingle = count === 1;
 	const singleName = isSingle ? projectNames[0] : null;
 
+	if (!isOpen) return null;
+
 	return (
-		<Dialog open={isOpen} onOpenChange={onOpenChange}>
+		<Dialog open={true} onOpenChange={onOpenChange}>
 			<DialogContent
 				onOpenAutoFocus={(event) => {
 					event.preventDefault();

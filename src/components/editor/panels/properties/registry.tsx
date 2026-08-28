@@ -21,14 +21,14 @@ import {
 	MusicNote03Icon,
 	MagicWand05Icon,
 	DashboardSpeed02Icon,
-	Mic01Icon,
+	SparklesIcon,
 } from "@hugeicons/core-free-icons";
 import { ElementParamsTab } from "./components/element-params-tab";
 import { ClipEffectsTab, StandaloneEffectTab } from "@/effects/components/effects-tab";
 import { MasksTab } from "@/masks/components/masks-tab";
 import { SpeedTab } from "@/speed/components/speed-tab";
 import { GraphicTab } from "@/graphics/components/graphic-tab";
-import { TtsTab } from "@/tts/components/tts-tab";
+import { TextAnimationTab } from "@/text/components/text-animation-tab";
 import { OcShapesIcon } from "@/components/icons";
 
 const TRANSFORM_PARAM_KEYS = [
@@ -37,9 +37,10 @@ const TRANSFORM_PARAM_KEYS = [
 	"transform.scaleX",
 	"transform.scaleY",
 	"transform.rotate",
+	"opacity",
 ] as const;
 
-const BLENDING_PARAM_KEYS = ["opacity", "blendMode"] as const;
+const BLENDING_PARAM_KEYS = ["blendMode"] as const;
 const AUDIO_PARAM_KEYS = ["volume", "muted"] as const;
 const TEXT_PARAM_KEYS = [
 	"content",
@@ -52,6 +53,8 @@ const TEXT_PARAM_KEYS = [
 	"textDecoration",
 	"letterSpacing",
 	"lineHeight",
+	"autoWrap",
+	"boxWidth",
 	"background.enabled",
 	"background.color",
 	"background.cornerRadius",
@@ -194,15 +197,6 @@ function buildTextTab({ element }: { element: TextElement }): PropertiesTabDef {
 	};
 }
 
-function buildTtsTab({ element }: { element: TextElement }): PropertiesTabDef {
-	return {
-		id: "tts",
-		label: "朗读",
-		icon: <HugeiconsIcon icon={Mic01Icon} size={16} />,
-		content: ({ trackId }) => <TtsTab element={element} trackId={trackId} />,
-	};
-}
-
 function buildGraphicTab({
 	element,
 }: {
@@ -231,6 +225,17 @@ function buildStandaloneEffectTab({
 	};
 }
 
+function buildTextAnimationTab({ element }: { element: TextElement }): PropertiesTabDef {
+	return {
+		id: "animation",
+		label: "动画",
+		icon: <HugeiconsIcon icon={SparklesIcon} size={16} />,
+		content: ({ trackId }) => (
+			<TextAnimationTab element={element} trackId={trackId} />
+		),
+	};
+}
+
 function getTextConfig({
 	element,
 }: {
@@ -240,7 +245,7 @@ function getTextConfig({
 		defaultTab: "text",
 		tabs: [
 			buildTextTab({ element }),
-			buildTtsTab({ element }),
+			buildTextAnimationTab({ element }),
 			buildTransformTab({ element }),
 			buildBlendingTab({ element }),
 		],

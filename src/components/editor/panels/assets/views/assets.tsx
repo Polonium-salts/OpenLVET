@@ -80,7 +80,7 @@ export function MediaView() {
 	const processFiles = async ({ files }: { files: File[] }) => {
 		if (!files || files.length === 0) return;
 		if (!activeProject) {
-			toast.error("No active project");
+			toast.error("当前未打开任何项目");
 			return;
 		}
 
@@ -318,13 +318,13 @@ function MediaItemWithContextMenu({
 	const { isSelected, selectedIds } = useSelection();
 	const idsToDelete = isSelected(item.id) ? selectedIds : [item.id];
 	const deleteLabel =
-		idsToDelete.length > 1 ? `Delete ${idsToDelete.length} items` : "Delete";
+		idsToDelete.length > 1 ? `删除选中的 ${idsToDelete.length} 个素材` : "删除素材";
 
 	return (
 		<ContextMenu>
 			<ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
 			<ContextMenuContent>
-				<ContextMenuItem>Export clips</ContextMenuItem>
+				<ContextMenuItem>导出片段</ContextMenuItem>
 				<ContextMenuItem
 					variant="destructive"
 					onClick={(event: React.MouseEvent<HTMLDivElement>) =>
@@ -501,7 +501,7 @@ function MediaPreview({
 	}
 
 	return (
-		<MediaTypePlaceholder icon={Image02Icon} label="Unknown" variant="muted" />
+		<MediaTypePlaceholder icon={Image02Icon} label="未知素材" variant="muted" />
 	);
 }
 

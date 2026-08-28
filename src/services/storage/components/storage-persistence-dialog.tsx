@@ -14,26 +14,27 @@ import { useStoragePersistence } from "@/services/storage/use-storage-persistenc
 export function StoragePersistenceDialog() {
 	const { showDialog, onConfirm, onDismiss } = useStoragePersistence();
 
+	if (!showDialog) return null;
+
 	return (
-		<Dialog open={showDialog} onOpenChange={(open) => !open && onDismiss()}>
+		<Dialog open={true} onOpenChange={(open) => !open && onDismiss()}>
 			<DialogContent className="sm:max-w-md">
 				<DialogHeader>
-					<DialogTitle>Don't lose your projects</DialogTitle>
+					<DialogTitle>开启持久化存储保护</DialogTitle>
 				</DialogHeader>
-				<DialogBody>
-					<p className="text-base text-muted-foreground">
-						Your browser can automatically delete your projects when storage
-						runs low.
+				<DialogBody className="space-y-2">
+					<p className="text-sm text-muted-foreground">
+						当系统磁盘空间紧张时，浏览器可能会自动清理网页的本地缓存数据。
 					</p>
-					<p className="text-base text-muted-foreground">
-						Allow OpenLVET to protect them?
+					<p className="text-sm text-foreground font-medium">
+						建议允许 OpenLVET 申请持久化存储权限，防止您的剪辑草稿与素材被系统意外清理。
 					</p>
 				</DialogBody>
 				<DialogFooter>
 					<Button variant="outline" onClick={onDismiss}>
-						Not now
+						暂不开启
 					</Button>
-					<Button onClick={onConfirm}>Allow</Button>
+					<Button onClick={onConfirm}>允许保护</Button>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>

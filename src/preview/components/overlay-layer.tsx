@@ -62,6 +62,18 @@ function getPositionedMountStyle({
 	} as const;
 }
 
+function OverlayInstanceContent({
+	instance,
+	sceneHeight,
+	sceneWidth,
+}: {
+	instance: PreviewOverlayInstance;
+	sceneHeight: number;
+	sceneWidth: number;
+}) {
+	return <>{instance.render({ sceneHeight, sceneWidth })}</>;
+}
+
 export function PreviewOverlayLayer({
 	instances,
 	plane,
@@ -107,10 +119,6 @@ export function PreviewOverlayLayer({
 					pointerEvents,
 					zIndex: instance.zIndex,
 				} as const;
-				const content = instance.render({
-					sceneHeight: viewport.sceneHeight,
-					sceneWidth: viewport.sceneWidth,
-				});
 
 				switch (instance.mount.kind) {
 					case "scene":
@@ -127,7 +135,11 @@ export function PreviewOverlayLayer({
 									sceneHeight: viewport.sceneHeight,
 								})}
 							>
-								{content}
+								<OverlayInstanceContent
+									instance={instance}
+									sceneHeight={viewport.sceneHeight}
+									sceneWidth={viewport.sceneWidth}
+								/>
 							</div>
 						);
 
@@ -145,7 +157,11 @@ export function PreviewOverlayLayer({
 									sceneHeight: viewport.sceneHeight,
 								})}
 							>
-								{content}
+								<OverlayInstanceContent
+									instance={instance}
+									sceneHeight={viewport.sceneHeight}
+									sceneWidth={viewport.sceneWidth}
+								/>
 							</div>
 						);
 
@@ -172,10 +188,6 @@ export function PreviewOverlayLayer({
 					<div key={anchor} className={HUD_ANCHOR_CLASS_NAMES[anchor]}>
 						{sortedAnchorInstances.map((instance) => {
 							const pointerEvents = instance.pointerEvents ?? "none";
-							const content = instance.render({
-								sceneHeight: viewport.sceneHeight,
-								sceneWidth: viewport.sceneWidth,
-							});
 
 							return (
 								<div
@@ -185,7 +197,11 @@ export function PreviewOverlayLayer({
 										zIndex: instance.zIndex,
 									}}
 								>
-									{content}
+									<OverlayInstanceContent
+										instance={instance}
+										sceneHeight={viewport.sceneHeight}
+										sceneWidth={viewport.sceneWidth}
+									/>
 								</div>
 							);
 						})}

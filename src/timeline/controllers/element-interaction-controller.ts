@@ -61,6 +61,8 @@ export interface ElementSelectionApi {
 
 export interface PlaybackReader {
 	getCurrentTime: () => MediaTime;
+	getIsPlaying?: () => boolean;
+	pause?: () => void;
 }
 
 export interface TimelineOps {
@@ -369,6 +371,10 @@ export class ElementInteractionController {
 
 		event.stopPropagation();
 		this.lastGestureWasDrag = false;
+
+		if (this.deps.playback.pause && this.deps.playback.getIsPlaying?.()) {
+			this.deps.playback.pause();
+		}
 
 		const ref = { trackId: track.id, elementId: element.id };
 

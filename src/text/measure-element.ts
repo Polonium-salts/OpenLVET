@@ -176,6 +176,16 @@ export function buildTextLayoutParamsFromElement({
 			key: "lineHeight",
 			fallback: DEFAULTS.text.lineHeight,
 		}),
+		autoWrap: readBooleanParam({
+			params: element.params,
+			key: "autoWrap",
+			fallback: DEFAULTS.text.autoWrap,
+		}),
+		boxWidth: readNumberParam({
+			params: element.params,
+			key: "boxWidth",
+			fallback: DEFAULTS.text.boxWidth,
+		}),
 	};
 }
 

@@ -88,7 +88,21 @@ class WasmCompositor {
 	}
 
 	render(frame: FrameDescriptor) {
-		renderFrame(frame);
+		const normalizedFrame = {
+			...frame,
+			items: frame.items.map((item) => {
+				if (item.type === "sceneEffect") {
+					const groups = item.effectPassGroups ?? item.effect_pass_groups ?? [];
+					return {
+						type: "sceneEffect",
+						effectPassGroups: groups,
+						effect_pass_groups: groups,
+					};
+				}
+				return item;
+			}),
+		};
+		renderFrame(normalizedFrame);
 		if (isRenderPerfEnabled()) {
 			recordWasmFrameProfile(
 				getLastFrameProfile() as Array<{ name: string; durationMs: number }>,

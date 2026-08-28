@@ -8,6 +8,7 @@ export type FrameDescriptor = {
 		color: [number, number, number, number];
 	};
 	items: FrameItemDescriptor[];
+	postGlslPasses?: EffectPass[];
 };
 
 export type FrameItemDescriptor =
@@ -23,6 +24,7 @@ export type FrameItemDescriptor =
 	| {
 			type: "sceneEffect";
 			effectPassGroups: EffectPass[][];
+			effect_pass_groups?: EffectPass[][];
 	  };
 
 export type QuadTransformDescriptor = {

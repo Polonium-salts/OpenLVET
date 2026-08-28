@@ -24,6 +24,8 @@ export interface SeekConfig {
 	getRulerScrollEl: () => HTMLDivElement | null;
 	getTracksScrollEl: () => HTMLDivElement | null;
 	getActiveProjectFps: () => FrameRate | null;
+	getIsPlaying?: () => boolean;
+	pause?: () => void;
 	clearSelectedElements: () => void;
 	seek: (time: MediaTime) => void;
 	setTimelineViewState: (viewState: {
@@ -121,6 +123,10 @@ export class SeekController {
 		source: SeekSource;
 	}): void {
 		if (event.button !== 0) return;
+
+		if (this.config.pause && this.config.getIsPlaying?.()) {
+			this.config.pause();
+		}
 
 		this.session = {
 			kind: "pending",

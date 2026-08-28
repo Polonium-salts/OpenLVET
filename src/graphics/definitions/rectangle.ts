@@ -14,45 +14,45 @@ interface RectangleParams {
 const RECTANGLE_PARAMS: ParamDefinition<keyof RectangleParams & string>[] = [
 	{
 		key: "fill",
-		label: "Fill",
+		label: "填充颜色",
 		type: "color",
 		default: "#ffffff",
 	},
 	{
 		key: "stroke",
-		label: "Color",
+		label: "描边颜色",
 		type: "color",
 		default: "#000000",
 		group: "stroke",
 	},
 	{
 		key: "strokeWidth",
-		label: "Width",
+		label: "描边粗细",
 		type: "number",
 		default: 0,
 		min: 0,
 		max: 64,
 		step: 1,
-		shortLabel: "W",
+		shortLabel: "宽",
 		group: "stroke",
 	},
 	STROKE_ALIGN_PARAM,
 	{
 		key: "cornerRadius",
-		label: "Corner radius",
+		label: "圆角半径",
 		type: "number",
 		default: 0,
 		min: 0,
 		max: 50,
 		step: 1,
-		shortLabel: "R",
+		shortLabel: "角",
 	},
 ];
 
 export const rectangleGraphicDefinition: GraphicDefinition = {
 	id: "rectangle",
-	name: "Rectangle",
-	keywords: ["rectangle", "square", "box"],
+	name: "矩形",
+	keywords: ["rectangle", "square", "box", "矩形", "正方形", "方块"],
 	params: RECTANGLE_PARAMS,
 	render({ ctx, params, width, height }) {
 		const fill = String(params.fill ?? "#ffffff");

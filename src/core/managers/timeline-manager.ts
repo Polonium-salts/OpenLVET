@@ -57,7 +57,12 @@ import {
 	UpsertEffectParamKeyframeCommand,
 	RemoveEffectParamKeyframeCommand,
 	ToggleSourceAudioSeparationCommand,
+	AddTransitionCommand,
+	RemoveTransitionCommand,
+	UpdateTransitionCommand,
+	ApplyTransitionToAllCommand,
 } from "@/commands/timeline";
+import type { TrackTransition } from "@/transitions/types";
 import type { InsertElementParams } from "@/commands/timeline/element/insert-element";
 import type {
 	PlannedElementMove,
@@ -346,6 +351,75 @@ export class TimelineManager {
 			trackId,
 			elementId,
 			maskId,
+		});
+		this.editor.command.execute({ command });
+	}
+
+	addTransition({
+		trackId,
+		fromElementId,
+		toElementId,
+		type,
+		duration,
+	}: {
+		trackId: string;
+		fromElementId: string;
+		toElementId: string;
+		type: string;
+		duration?: MediaTime;
+	}): string {
+		const command = new AddTransitionCommand({
+			trackId,
+			fromElementId,
+			toElementId,
+			type,
+			duration,
+		});
+		this.editor.command.execute({ command });
+		return command.getTransitionId();
+	}
+
+	removeTransition({
+		trackId,
+		transitionId,
+	}: {
+		trackId: string;
+		transitionId: string;
+	}): void {
+		const command = new RemoveTransitionCommand({
+			trackId,
+			transitionId,
+		});
+		this.editor.command.execute({ command });
+	}
+
+	updateTransition({
+		trackId,
+		transitionId,
+		patch,
+	}: {
+		trackId: string;
+		transitionId: string;
+		patch: Partial<TrackTransition>;
+	}): void {
+		const command = new UpdateTransitionCommand({
+			trackId,
+			transitionId,
+			patch,
+		});
+		this.editor.command.execute({ command });
+	}
+
+	applyTransitionToAll({
+		type,
+		duration,
+	}: {
+		type: string;
+		duration?: MediaTime;
+	}): void {
+		const command = new ApplyTransitionToAllCommand({
+			type,
+			duration,
 		});
 		this.editor.command.execute({ command });
 	}

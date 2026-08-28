@@ -10,7 +10,7 @@ export const baseMetaData: Metadata = {
 		description: SITE_INFO.description,
 		url: SITE_URL,
 		siteName: SITE_INFO.title,
-		locale: "en_US",
+		locale: "zh_CN",
 		type: "website",
 		images: [
 			{

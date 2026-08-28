@@ -15,7 +15,6 @@ import { DeleteProjectDialog } from "@/project/components/delete-project-dialog"
 import { useRouter } from "next/navigation";
 import { FaDiscord } from "react-icons/fa6";
 import { ExportButton } from "./export-button";
-import { FeedbackPopover } from "@/feedback/components/feedback-popover";
 import { ThemeToggle } from "../theme-toggle";
 import { DEFAULT_LOGO_URL } from "@/site/brand";
 import { SOCIAL_LINKS } from "@/site/social";
@@ -26,6 +25,10 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ShortcutsDialog } from "@/actions/components/shortcuts-dialog";
 import Image from "next/image";
 import { cn } from "@/utils/ui";
+import {
+	PluginHeaderButton,
+	DynamicPluginHeaderItems,
+} from "@/plugins/components/plugin-header-items";
 
 export function EditorHeader() {
 	return (
@@ -38,9 +41,12 @@ export function EditorHeader() {
 					<span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
 					<span>已自动保存</span>
 				</div>
+				<div className="h-4 w-px bg-border/40 mx-0.5 hidden md:block" />
+				<DynamicPluginHeaderItems position="left" />
 			</div>
 			<nav className="flex items-center gap-2">
-				<FeedbackPopover />
+				<DynamicPluginHeaderItems position="right" />
+				<PluginHeaderButton />
 				<ExportButton />
 				<ThemeToggle />
 			</nav>

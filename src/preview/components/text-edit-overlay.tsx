@@ -114,6 +114,9 @@ export function TextEditOverlay({
 		? (bg.paddingY ?? DEFAULTS.text.background.paddingY) * fontSizeRatio
 		: 0;
 
+	const isAutoWrap =
+		resolvedTextLayout.autoWrap && resolvedTextLayout.scaledBoxWidth > 0;
+
 	return (
 		<div
 			className="absolute"
@@ -132,7 +135,7 @@ export function TextEditOverlay({
 				onKeyDown={handleKeyDown}
 				aria-label="Edit text"
 				rows={Math.max(1, text.split("\n").length)}
-				className="resize-none overflow-hidden outline-none whitespace-pre border-none p-0 m-0 bg-transparent block"
+				className={`resize-none overflow-hidden outline-none border-none p-0 m-0 bg-transparent block ${isAutoWrap ? "whitespace-pre-wrap break-words" : "whitespace-pre"}`}
 				style={{
 					fontSize: resolvedTextLayout.scaledFontSize,
 					fontFamily: textParams.fontFamily,
@@ -153,7 +156,8 @@ export function TextEditOverlay({
 						? `${canvasPaddingY}px ${canvasPaddingX}px`
 						: 0,
 					minWidth: "1em",
-					width: "max-content",
+					width: isAutoWrap ? `${resolvedTextLayout.scaledBoxWidth}px` : "max-content",
+					maxWidth: isAutoWrap ? `${resolvedTextLayout.scaledBoxWidth}px` : undefined,
 				}}
 			/>
 		</div>

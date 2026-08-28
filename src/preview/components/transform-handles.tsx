@@ -115,7 +115,10 @@ export function TransformHandles({
 					/>
 				);
 			})}
-			{EDGES.map((edge) => {
+			{(element.type === "text"
+				? (["right", "left"] as Edge[])
+				: EDGES
+			).map((edge) => {
 				const edgePosition = getEdgeHandlePosition({ bounds, edge });
 				const screen = toOverlay({
 					canvasX: edgePosition.x,

@@ -1,0 +1,73 @@
+{
+  "id": "global-theme-master",
+  "name": "全局主题定制大师 (Theme Master)",
+  "version": "1.0.0",
+  "description": "一键切换与深度定制 OpenLVET 全局色彩主题（赛博朋克、极光翡翠、日落暮光、樱花粉、深海蓝等），支持在左侧面板可视化调色和顶部快捷切换。",
+  "author": "OpenLVET Team",
+  "category": "visuals",
+  "tags": [
+    "主题",
+    "调色",
+    "外观",
+    "UI",
+    "个性化"
+  ],
+  "configSchema": [
+    {
+      "key": "themePreset",
+      "label": "预设主题配色",
+      "description": "选择系统全局的主题基调风格",
+      "type": "select",
+      "default": "cyberpunk",
+      "options": [
+        {
+          "label": "🌌 赛博霓虹 (Cyberpunk Purple)",
+          "value": "cyberpunk"
+        },
+        {
+          "label": "🍃 极光翡翠 (Emerald Aurora)",
+          "value": "emerald"
+        },
+        {
+          "label": "🌅 日落暮光 (Sunset Amber)",
+          "value": "sunset"
+        },
+        {
+          "label": "🌸 樱花绯粉 (Sakura Rose)",
+          "value": "sakura"
+        },
+        {
+          "label": "🌊 深海湛蓝 (Ocean Cobalt)",
+          "value": "ocean"
+        },
+        {
+          "label": "⚡ 极客冷灰 (Monochrome)",
+          "value": "monochrome"
+        },
+        {
+          "label": "🎨 自定义主色 (Custom Hex)",
+          "value": "custom"
+        }
+      ]
+    },
+    {
+      "key": "customPrimary",
+      "label": "自定义主色 (HEX 或 HSL)",
+      "description": "当主题选择「自定义主色」时生效",
+      "type": "string",
+      "default": "#a855f7"
+    },
+    {
+      "key": "enableAccentGlow",
+      "label": "启用强调色流光与光晕",
+      "description": "在激活按钮和轨道选中状态添加微光氛围特效",
+      "type": "boolean",
+      "default": true
+    }
+  ],
+  "defaultConfig": {
+    "themePreset": "cyberpunk",
+    "customPrimary": "#a855f7",
+    "enableAccentGlow": true
+  }
+}

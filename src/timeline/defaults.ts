@@ -17,6 +17,8 @@ const defaultVolume = 0;
 
 const defaultTextLetterSpacing = 0;
 const defaultTextLineHeight = 1.2;
+const defaultTextAutoWrap = true;
+const defaultTextBoxWidth = 0;
 
 const defaultTextBackground = {
 	enabled: false,
@@ -30,13 +32,13 @@ const defaultTextBackground = {
 
 const defaultTextElement: Omit<TextElement, "id"> = {
 	type: "text",
-	name: "Text",
+	name: "文本",
 	duration: DEFAULT_NEW_ELEMENT_DURATION,
 	startTime: ZERO_MEDIA_TIME,
 	trimStart: ZERO_MEDIA_TIME,
 	trimEnd: ZERO_MEDIA_TIME,
 	params: {
-		content: "Default text",
+		content: "默认文本",
 		fontSize: 15,
 		fontFamily: "Arial",
 		color: "#ffffff",
@@ -46,6 +48,8 @@ const defaultTextElement: Omit<TextElement, "id"> = {
 		textDecoration: "none",
 		letterSpacing: defaultTextLetterSpacing,
 		lineHeight: defaultTextLineHeight,
+		autoWrap: defaultTextAutoWrap,
+		boxWidth: defaultTextBoxWidth,
 		"background.enabled": defaultTextBackground.enabled,
 		"background.color": defaultTextBackground.color,
 		"background.cornerRadius": defaultTextBackground.cornerRadius,
@@ -79,6 +83,8 @@ export const DEFAULTS = {
 	text: {
 		letterSpacing: defaultTextLetterSpacing,
 		lineHeight: defaultTextLineHeight,
+		autoWrap: defaultTextAutoWrap,
+		boxWidth: defaultTextBoxWidth,
 		background: defaultTextBackground,
 		element: defaultTextElement,
 	},

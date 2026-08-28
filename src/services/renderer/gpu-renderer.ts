@@ -27,28 +27,65 @@ export function isGpuAvailable(): boolean {
 	return gpuAvailable;
 }
 
+import { glEffectPipeline } from "@/effects/gl/gl-effect-renderer";
+
 export const gpuRenderer = {
 	applyEffect({
 		source,
 		width,
 		height,
 		passes,
+		time = 0,
 	}: {
 		source: OffscreenCanvas;
 		width: number;
 		height: number;
 		passes: EffectPass[];
+		time?: number;
 	}): OffscreenCanvas {
-		if (passes.length === 0 || !gpuAvailable) {
+		if (passes.length === 0) {
 			return source;
 		}
 
-		return applyEffectPasses({
-			source,
-			width,
-			height,
-			passes: serializeEffectPasses(passes),
-		});
+		// If any pass has glsl shader code, use high-performance WebGL GLSL pipeline
+		const hasGlsl = passes.some((p) => Boolean(p.glsl));
+		if (hasGlsl) {
+			const glResult = glEffectPipeline.render({
+				source,
+				width,
+				height,
+				passes,
+				time,
+			});
+			if (glResult) {
+				return glResult as OffscreenCanvas;
+			}
+		}
+
+		if (gpuAvailable) {
+			try {
+				return applyEffectPasses({
+					source,
+					width,
+					height,
+					passes: serializeEffectPasses(passes),
+				});
+			} catch (error) {
+				console.warn("WASM applyEffectPasses failed, falling back to WebGL:", error);
+				const glResult = glEffectPipeline.render({
+					source,
+					width,
+					height,
+					passes,
+					time,
+				});
+				if (glResult) {
+					return glResult as OffscreenCanvas;
+				}
+			}
+		}
+
+		return source;
 	},
 
 	applyMaskFeather({
@@ -86,5 +123,9 @@ function serializeEffectPasses(passes: EffectPass[]) {
 }
 
 function normalizeUniformValue(value: EffectUniformValue): number[] {
+	if (typeof value === "boolean") {
+		return [value ? 1 : 0];
+	}
 	return typeof value === "number" ? [value] : value;
 }
+

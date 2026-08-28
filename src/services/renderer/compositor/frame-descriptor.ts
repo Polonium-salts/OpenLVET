@@ -16,6 +16,9 @@ import { RootNode } from "../nodes/root-node";
 import { StickerNode } from "../nodes/sticker-node";
 import { renderTextToContext, TextNode } from "../nodes/text-node";
 import { VideoNode } from "../nodes/video-node";
+import { TransitionNode } from "../nodes/transition-node";
+import { glTransitionPipeline } from "@/transitions/gl/gl-transition-renderer";
+import { glEffectPipeline } from "@/effects/gl/gl-effect-renderer";
 import type { ResolvedVisualSourceNodeState } from "../nodes/visual-node";
 import type {
 	FrameDescriptor,
@@ -39,6 +42,7 @@ export async function buildFrameDescriptor({
 }> {
 	const items: FrameItemDescriptor[] = [];
 	const textures = new Map<string, TextureUploadDescriptor>();
+	const postGlslPasses: any[] = [];
 
 	await collectNode({
 		node,
@@ -46,6 +50,7 @@ export async function buildFrameDescriptor({
 		path: "root",
 		items,
 		textures,
+		postGlslPasses,
 	});
 
 	incrementCounter({ name: "frameItems", by: items.length });
@@ -59,6 +64,7 @@ export async function buildFrameDescriptor({
 				color: [0, 0, 0, 1],
 			},
 			items,
+			postGlslPasses: postGlslPasses.length > 0 ? postGlslPasses : undefined,
 		},
 		textures: [...textures.values()],
 	};
@@ -70,12 +76,14 @@ async function collectNode({
 	path,
 	items,
 	textures,
+	postGlslPasses,
 }: {
 	node: AnyBaseNode;
 	renderer: CanvasRenderer;
 	path: string;
 	items: FrameItemDescriptor[];
 	textures: Map<string, TextureUploadDescriptor>;
+	postGlslPasses: any[];
 }): Promise<void> {
 	if (node instanceof RootNode) {
 		for (let index = 0; index < node.children.length; index++) {
@@ -85,6 +93,7 @@ async function collectNode({
 				path: `${path}:${index}`,
 				items,
 				textures,
+				postGlslPasses,
 			});
 		}
 		return;
@@ -124,10 +133,22 @@ async function collectNode({
 		if (!node.resolved || node.resolved.passes.length === 0) {
 			return;
 		}
-		items.push({
-			type: "sceneEffect",
-			effectPassGroups: [node.resolved.passes],
-		});
+		const wasmPasses = node.resolved.passes.filter(
+			(p) => p.shader === "gaussian-blur",
+		);
+		const glslPasses = node.resolved.passes.filter(
+			(p) => Boolean(p.glsl) || p.shader !== "gaussian-blur",
+		);
+		if (wasmPasses.length > 0) {
+			items.push({
+				type: "sceneEffect",
+				effectPassGroups: [wasmPasses],
+				effect_pass_groups: [wasmPasses],
+			});
+		}
+		if (glslPasses.length > 0) {
+			postGlslPasses.push(...glslPasses);
+		}
 		return;
 	}
 
@@ -202,7 +223,237 @@ async function collectNode({
 			items,
 			textures,
 		});
+		return;
 	}
+
+	if (node instanceof TransitionNode) {
+		if (!node.resolved) return;
+		const { fromNode, toNode, progress, glsl } = node.resolved;
+
+		if (progress <= 0) {
+			await collectNode({
+				node: fromNode,
+				renderer,
+				path: `${path}:from`,
+				items,
+				textures,
+				postGlslPasses,
+			});
+			return;
+		}
+		if (progress >= 1) {
+			await collectNode({
+				node: toNode,
+				renderer,
+				path: `${path}:to`,
+				items,
+				textures,
+				postGlslPasses,
+			});
+			return;
+		}
+
+		const infoFrom = getNodeVisualInfo({ node: fromNode, renderer });
+		const infoTo = getNodeVisualInfo({ node: toNode, renderer });
+
+		if (!infoFrom.source && !infoTo.source) return;
+
+		const transform = interpolateTransform(
+			infoFrom.transform,
+			infoTo.transform,
+			progress,
+		);
+
+		const baseWidth = Math.max(1, Math.round(transform.width));
+		const baseHeight = Math.max(1, Math.round(transform.height));
+
+		const maxSourceW = Math.max(infoFrom.sourceWidth, infoTo.sourceWidth);
+		const maxSourceH = Math.max(infoFrom.sourceHeight, infoTo.sourceHeight);
+		const scaleFactor = Math.min(
+			2,
+			Math.max(1, Math.max(maxSourceW / baseWidth, maxSourceH / baseHeight)),
+		);
+
+		const renderWidth = Math.min(
+			renderer.width,
+			Math.max(1, Math.round(baseWidth * scaleFactor)),
+		);
+		const renderHeight = Math.min(
+			renderer.height,
+			Math.max(1, Math.round(baseHeight * scaleFactor)),
+		);
+
+		const surfaceFrom = createCanvasSurface({
+			width: renderWidth,
+			height: renderHeight,
+		});
+		if (infoFrom.source) {
+			surfaceFrom.context.drawImage(
+				infoFrom.source as any,
+				0,
+				0,
+				renderWidth,
+				renderHeight,
+			);
+		}
+
+		const surfaceTo = createCanvasSurface({
+			width: renderWidth,
+			height: renderHeight,
+		});
+		if (infoTo.source) {
+			surfaceTo.context.drawImage(
+				infoTo.source as any,
+				0,
+				0,
+				renderWidth,
+				renderHeight,
+			);
+		}
+
+		const transitionCanvas = glTransitionPipeline.render({
+			fromSource: surfaceFrom.canvas,
+			toSource: surfaceTo.canvas,
+			progress,
+			glsl,
+			width: renderWidth,
+			height: renderHeight,
+			uniforms: (node.params.params as any) ?? {},
+		});
+
+		if (transitionCanvas) {
+			const textureId = `${path}:transition`;
+			textures.set(textureId, {
+				kind: "rendered",
+				id: textureId,
+				contentHash: `transition:${path}:${progress}:${renderWidth}x${renderHeight}`,
+				width: renderWidth,
+				height: renderHeight,
+				draw: (ctx) => {
+					ctx.drawImage(transitionCanvas, 0, 0, renderWidth, renderHeight);
+				},
+			});
+
+			const opacity =
+				infoFrom.opacity * (1 - progress) + infoTo.opacity * progress;
+
+			items.push({
+				type: "layer",
+				textureId,
+				transform,
+				opacity,
+				blendMode:
+					progress < 0.5
+						? (infoFrom.blendMode as any)
+						: (infoTo.blendMode as any),
+				effectPassGroups: [],
+				mask: null,
+			});
+		}
+		return;
+	}
+}
+
+function getNodeVisualInfo({
+	node,
+	renderer,
+}: {
+	node: AnyBaseNode;
+	renderer: CanvasRenderer;
+}): {
+	source: TexImageSource | null;
+	sourceWidth: number;
+	sourceHeight: number;
+	transform: QuadTransformDescriptor;
+	opacity: number;
+	blendMode: string;
+} {
+	if (
+		node instanceof VideoNode ||
+		node instanceof ImageNode ||
+		node instanceof StickerNode ||
+		node instanceof GraphicNode
+	) {
+		if (!node.resolved) {
+			return {
+				source: null,
+				sourceWidth: renderer.width,
+				sourceHeight: renderer.height,
+				transform: fullCanvasTransform(renderer),
+				opacity: 1,
+				blendMode: "normal",
+			};
+		}
+		const source =
+			node instanceof GraphicNode
+				? node.getSource({ resolvedParams: node.resolved.resolvedParams })
+				: node.resolved.source;
+		const sourceWidth =
+			node instanceof GraphicNode
+				? DEFAULT_GRAPHIC_SOURCE_SIZE
+				: (node.resolved as ResolvedVisualSourceNodeState).sourceWidth;
+		const sourceHeight =
+			node instanceof GraphicNode
+				? DEFAULT_GRAPHIC_SOURCE_SIZE
+				: (node.resolved as ResolvedVisualSourceNodeState).sourceHeight;
+
+		const transform = computeVisualTransform({
+			renderer,
+			resolved: node.resolved,
+			sourceWidth,
+			sourceHeight,
+		});
+
+		return {
+			source: (source as TexImageSource) ?? null,
+			sourceWidth,
+			sourceHeight,
+			transform,
+			opacity: node.resolved.opacity ?? 1,
+			blendMode: node.params.blendMode ?? "normal",
+		};
+	}
+
+	if (node instanceof TextNode && node.resolved) {
+		const surface = createCanvasSurface({
+			width: renderer.width,
+			height: renderer.height,
+		});
+		renderTextToContext({ node, ctx: surface.context });
+		return {
+			source: surface.canvas,
+			sourceWidth: renderer.width,
+			sourceHeight: renderer.height,
+			transform: fullCanvasTransform(renderer),
+			opacity: node.resolved.opacity ?? 1,
+			blendMode: node.params.blendMode ?? "normal",
+		};
+	}
+
+	return {
+		source: null,
+		sourceWidth: renderer.width,
+		sourceHeight: renderer.height,
+		transform: fullCanvasTransform(renderer),
+		opacity: 1,
+		blendMode: "normal",
+	};
+}
+
+function interpolateTransform(
+	a: QuadTransformDescriptor,
+	b: QuadTransformDescriptor,
+	t: number,
+): QuadTransformDescriptor {
+	return {
+		centerX: a.centerX * (1 - t) + b.centerX * t,
+		centerY: a.centerY * (1 - t) + b.centerY * t,
+		width: Math.max(1, a.width * (1 - t) + b.width * t),
+		height: Math.max(1, a.height * (1 - t) + b.height * t),
+		rotationDegrees: a.rotationDegrees * (1 - t) + b.rotationDegrees * t,
+		flipX: t < 0.5 ? a.flipX : b.flipX,
+		flipY: t < 0.5 ? a.flipY : b.flipY,
+	};
 }
 
 async function collectVisualSourceNode({
@@ -239,11 +490,34 @@ async function collectVisualSourceNode({
 			? DEFAULT_GRAPHIC_SOURCE_SIZE
 			: (node.resolved as ResolvedVisualSourceNodeState).sourceHeight;
 
-	const textureId = `${path}:source`;
+	const allPasses = (node.resolved.effectPasses ?? []).flat();
+	const glslPasses = allPasses.filter(
+		(p) => Boolean(p.glsl) || p.shader !== "gaussian-blur",
+	);
+	const wasmPassGroups = (node.resolved.effectPasses ?? [])
+		.map((group) => group.filter((p) => p.shader === "gaussian-blur"))
+		.filter((group) => group.length > 0);
+
+	let effectiveSource = source;
+	let effectHash = "";
+	if (glslPasses.length > 0) {
+		const filteredCanvas = glEffectPipeline.render({
+			source,
+			width: sourceWidth,
+			height: sourceHeight,
+			passes: glslPasses,
+		});
+		if (filteredCanvas) {
+			effectiveSource = filteredCanvas;
+			effectHash = `:${JSON.stringify(glslPasses.map((p) => p.uniforms))}`;
+		}
+	}
+
+	const textureId = `${path}:source${effectHash}`;
 	textures.set(textureId, {
 		kind: "external",
 		id: textureId,
-		source,
+		source: effectiveSource,
 		width: sourceWidth,
 		height: sourceHeight,
 	});
@@ -268,7 +542,7 @@ async function collectVisualSourceNode({
 		transform,
 		opacity: node.resolved.opacity,
 		blendMode: node.params.blendMode ?? "normal",
-		effectPassGroups: node.resolved.effectPasses,
+		effectPassGroups: wasmPassGroups,
 		mask,
 	});
 	if (strokeLayer) {
@@ -293,6 +567,14 @@ function collectTextNode({
 		return;
 	}
 
+	const allPasses = (node.resolved.effectPasses ?? []).flat();
+	const glslPasses = allPasses.filter(
+		(p) => Boolean(p.glsl) || p.shader !== "gaussian-blur",
+	);
+	const wasmPassGroups = (node.resolved.effectPasses ?? [])
+		.map((group) => group.filter((p) => p.shader === "gaussian-blur"))
+		.filter((group) => group.length > 0);
+
 	const textureId = `${path}:text`;
 	const { width, height } = renderer;
 	// Text output is fully determined by node.params + node.resolved. Both are
@@ -310,6 +592,21 @@ function collectTextNode({
 		width,
 		height,
 		draw: (ctx) => {
+			if (glslPasses.length > 0) {
+				const { canvas: textCanvas, context: textCtx } =
+					createCanvasSurface({ width, height });
+				renderTextToContext({ node, ctx: textCtx });
+				const filtered = glEffectPipeline.render({
+					source: textCanvas,
+					width,
+					height,
+					passes: glslPasses,
+				});
+				if (filtered) {
+					ctx.drawImage(filtered, 0, 0, width, height);
+					return;
+				}
+			}
 			renderTextToContext({ node, ctx });
 		},
 	});
@@ -319,7 +616,7 @@ function collectTextNode({
 		transform: fullCanvasTransform(renderer),
 		opacity: node.resolved.opacity,
 		blendMode: node.params.blendMode ?? "normal",
-		effectPassGroups: node.resolved.effectPasses,
+		effectPassGroups: wasmPassGroups,
 		mask: null,
 	});
 }

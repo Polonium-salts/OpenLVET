@@ -1,0 +1,222 @@
+import type { ReactNode } from "react";
+import type { EditorCore } from "@/core";
+import type { EffectDefinition } from "@/effects/types";
+import type { TransitionDefinition } from "@/transitions/types";
+import type { PreviewOverlaySourceResult } from "@/preview/overlays";
+
+export type PluginCategory =
+	| "visuals"
+	| "tools"
+	| "audio"
+	| "workflow"
+	| "ai"
+	| "custom";
+
+export type PluginConfigFieldType =
+	| "boolean"
+	| "string"
+	| "number"
+	| "select"
+	| "color"
+	| "textarea";
+
+export interface PluginConfigFieldOption {
+	label: string;
+	value: string | number;
+}
+
+export interface PluginConfigFieldSchema {
+	key: string;
+	label: string;
+	description?: string;
+	type: PluginConfigFieldType;
+	default?: unknown;
+	min?: number;
+	max?: number;
+	step?: number;
+	options?: PluginConfigFieldOption[];
+	placeholder?: string;
+}
+
+export interface PluginManifest {
+	id: string;
+	name: string;
+	version: string;
+	description: string;
+	author: string;
+	category: PluginCategory;
+	icon?: string; // Icon name or SVG identifier
+	tags?: string[];
+	homepage?: string;
+	gitUrl?: string;
+	builtin?: boolean;
+	minAppVersion?: string;
+	configSchema?: PluginConfigFieldSchema[];
+	defaultConfig?: Record<string, unknown>;
+	sourceCode?: string;
+}
+
+export interface PluginAssetTabDefinition {
+	id: string;
+	label: string;
+	icon?: ReactNode | string;
+	order?: number;
+	render: (props: { plugin: PluginManifest }) => ReactNode;
+}
+
+export interface PluginHeaderItemDefinition {
+	id: string;
+	position?: "left" | "right";
+	order?: number;
+	render: (props: { plugin: PluginManifest }) => ReactNode;
+}
+
+export interface PluginToolbarItemDefinition {
+	id: string;
+	order?: number;
+	render: (props: { plugin: PluginManifest }) => ReactNode;
+}
+
+export interface PluginPropertiesTabDefinition {
+	id: string;
+	label: string;
+	icon?: ReactNode | string;
+	order?: number;
+	elementTypes?: string[]; // e.g. ["video", "image", "text", "audio"]
+	render: (props: {
+		element: TimelineElement;
+		trackId: string;
+		plugin: PluginManifest;
+	}) => ReactNode;
+}
+
+export interface PluginActionDefinition {
+	id: string;
+	description: string;
+	category?: string;
+	defaultShortcut?: string; // e.g. "alt+shift+k"
+	handler: (context: PluginContext) => void | Promise<void>;
+}
+
+export type PluginEventListener<T = unknown> = (data: T) => void;
+
+export interface PluginContext {
+	readonly plugin: PluginManifest;
+	readonly editor: EditorCore;
+
+	// Actions & Shortcuts
+	actions: {
+		registerAction: (action: PluginActionDefinition) => () => void;
+		invokeAction: (actionId: string, args?: unknown) => void;
+	};
+
+	// Effects & WebGL Shaders
+	effects: {
+		registerEffect: (definition: EffectDefinition) => () => void;
+		unregisterEffect: (type: string) => void;
+	};
+
+	// Transitions
+	transitions: {
+		registerTransition: (definition: TransitionDefinition) => () => void;
+	};
+
+	// Left Asset Panel Tabs
+	panels: {
+		registerAssetTab: (tab: PluginAssetTabDefinition) => () => void;
+		unregisterAssetTab: (id: string) => void;
+	};
+
+	// Top Navigation Header Items
+	header: {
+		registerHeaderItem: (item: PluginHeaderItemDefinition) => () => void;
+		unregisterHeaderItem: (id: string) => void;
+	};
+
+	// Timeline Toolbar Action Buttons
+	timeline: {
+		registerToolbarItem: (item: PluginToolbarItemDefinition) => () => void;
+		unregisterToolbarItem: (id: string) => void;
+	};
+
+	// Right Properties / Inspector Panel Tabs
+	properties: {
+		registerTab: (tab: PluginPropertiesTabDefinition) => () => void;
+		unregisterTab: (id: string) => void;
+	};
+
+	// Preview Overlays (HUD / Watermarks / Guides)
+	overlays: {
+		registerPreviewOverlay: (
+			overlayFactory: () => PreviewOverlaySourceResult,
+		) => () => void;
+	};
+
+	// Global Event Bus
+	events: {
+		on: <T = unknown>(
+			event: string,
+			listener: PluginEventListener<T>,
+		) => () => void;
+		off: <T = unknown>(
+			event: string,
+			listener: PluginEventListener<T>,
+		) => void;
+		emit: <T = unknown>(event: string, data?: T) => void;
+	};
+
+	// Plugin-scoped local storage
+	storage: {
+		get: <T = unknown>(key: string, defaultValue?: T) => T;
+		set: <T = unknown>(key: string, value: T) => void;
+		delete: (key: string) => void;
+		clear: () => void;
+	};
+
+	// Dynamic Plugin Config (reactive to user settings)
+	config: {
+		get: <T = unknown>(key: string, defaultValue?: T) => T;
+		getAll: () => Record<string, unknown>;
+		set: (key: string, value: unknown) => void;
+		onChange: (
+			listener: (newConfig: Record<string, unknown>) => void,
+		) => () => void;
+	};
+
+	// UI Utilities
+	ui: {
+		showToast: (
+			message: string,
+			options?: {
+				type?: "success" | "error" | "info" | "warning";
+				description?: string;
+			},
+		) => void;
+		openPluginCenter: (defaultTab?: string) => void;
+		openPluginSettings: (pluginId?: string) => void;
+	};
+
+	// Utility to register disposable cleanup handlers
+	addDisposable: (disposable: () => void) => void;
+}
+
+export interface PluginModule {
+	manifest: PluginManifest;
+	activate: (context: PluginContext) => void | Promise<void>;
+	deactivate?: (context: PluginContext) => void | Promise<void>;
+	onConfigChange?: (
+		config: Record<string, unknown>,
+		context: PluginContext,
+	) => void;
+}
+
+export interface InstalledPluginRecord {
+	manifest: PluginManifest;
+	enabled: boolean;
+	config: Record<string, unknown>;
+	installedAt: number;
+	updatedAt: number;
+	sourceType: "builtin" | "zip" | "git" | "url" | "code" | "file";
+	sourceUrl?: string;
+	rawSource?: string;
+}

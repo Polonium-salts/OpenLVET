@@ -265,6 +265,21 @@ const textElementParams: ElementParamDefinition[] = [
 		step: 0.1,
 	},
 	{
+		key: "autoWrap",
+		label: "自动换行",
+		type: "boolean",
+		default: DEFAULTS.text.autoWrap,
+		keyframable: false,
+	},
+	{
+		key: "boxWidth",
+		label: "文本框宽度",
+		type: "number",
+		default: DEFAULTS.text.boxWidth,
+		min: 0,
+		step: 1,
+	},
+	{
 		key: "background.enabled",
 		label: "启用背景框",
 		type: "boolean",

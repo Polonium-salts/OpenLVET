@@ -34,6 +34,10 @@ export class TimelineDragSource {
 		return this.active;
 	}
 
+	getCurrentDragData(): TimelineDragData | null {
+		return this.active;
+	}
+
 	isActive(): boolean {
 		return this.active !== null;
 	}

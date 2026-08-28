@@ -280,9 +280,13 @@ function EffectSection({
 				}
 			>
 				<SectionTitle
-					className={cn(onToggle && !effect.enabled && "text-muted-foreground")}
+					className={cn(
+						"flex items-center gap-1.5",
+						onToggle && !effect.enabled && "text-muted-foreground",
+					)}
 				>
-					{definition.name}
+					{definition.icon && <span>{definition.icon}</span>}
+					<span>{definition.name}</span>
 				</SectionTitle>
 			</SectionHeader>
 			<SectionContent

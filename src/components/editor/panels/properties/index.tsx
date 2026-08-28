@@ -14,6 +14,28 @@ import { usePropertiesStore } from "./stores/properties-store";
 import { getPropertiesConfig } from "./registry";
 import { cn } from "@/utils/ui";
 import { EmptyView } from "./empty-view";
+import { useTransitionsStore } from "@/transitions/transitions-store";
+import { TransitionPropertiesTab } from "@/transitions/components/transition-properties-tab";
+import { usePluginStore } from "@/plugins/plugin-store";
+import type {
+	PluginPropertiesTabDefinition,
+	PluginManifest,
+} from "@/plugins/types";
+import type { PropertiesTabDef } from "./registry";
+
+function DynamicPropertiesTabRenderer({
+	tab,
+	element,
+	trackId,
+	manifest,
+}: {
+	tab: PluginPropertiesTabDefinition;
+	element: any;
+	trackId: string;
+	manifest: PluginManifest;
+}) {
+	return <>{tab.render({ element, trackId, plugin: manifest })}</>;
+}
 
 export function PropertiesPanel() {
 	const editor = useEditor();
@@ -21,6 +43,19 @@ export function PropertiesPanel() {
 	useEditor((e) => e.media.getAssets());
 	const { selectedElements } = useElementSelection();
 	const { activeTabPerType, setActiveTab } = usePropertiesStore();
+	const { selectedTransitionRef } = useTransitionsStore();
+	const dynamicPropertiesTabs = usePluginStore((s) => s.dynamicPropertiesTabs);
+	const installedPlugins = usePluginStore((s) => s.installedPlugins);
+
+	if (selectedTransitionRef && selectedElements.length === 0) {
+		return (
+			<div className="panel bg-background flex h-full overflow-hidden rounded-sm border">
+				<ScrollArea className="flex-1 scrollbar-hidden">
+					<TransitionPropertiesTab />
+				</ScrollArea>
+			</div>
+		);
+	}
 
 	if (selectedElements.length === 0) {
 		return (
@@ -51,7 +86,42 @@ export function PropertiesPanel() {
 
 	const { element, track } = elementWithTrack;
 	const config = getPropertiesConfig({ element, mediaAssets });
-	const visibleTabs = config.tabs;
+
+	const dynamicTabsForElement: PropertiesTabDef[] = dynamicPropertiesTabs
+		.filter((t) => !t.elementTypes || t.elementTypes.includes(element.type))
+		.map((t) => {
+			const dummyManifest =
+				Object.values(installedPlugins).find((p) => p.enabled)?.manifest ?? {
+					id: "plugin",
+					name: "Plugin",
+					version: "1.0.0",
+					description: "",
+					author: "",
+					category: "custom" as const,
+				};
+
+			return {
+				id: t.id,
+				label: t.label,
+				icon:
+					typeof t.icon === "string" ? (
+						<span className="text-xs leading-none">{t.icon}</span>
+					) : (
+						(t.icon ?? <span className="text-xs leading-none">🧩</span>)
+					),
+				content: ({ trackId }) => (
+					<DynamicPropertiesTabRenderer
+						key={t.id}
+						tab={t}
+						element={element}
+						trackId={trackId}
+						manifest={dummyManifest}
+					/>
+				),
+			};
+		});
+
+	const visibleTabs = [...config.tabs, ...dynamicTabsForElement];
 
 	const storedTabId = activeTabPerType[element.type];
 	const isStoredTabVisible = visibleTabs.some((t) => t.id === storedTabId);

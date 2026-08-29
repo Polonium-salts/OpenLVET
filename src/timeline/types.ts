@@ -282,7 +282,7 @@ export interface ComputeDropTargetParams {
 	verticalDragDirection?: "up" | "down" | null;
 	startTimeOverride?: MediaTime;
 	excludeElementId?: string;
-	targetElementTypes?: string[];
+	targetElementTypes?: readonly string[];
 }
 
 export interface ClipboardItem {

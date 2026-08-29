@@ -26,12 +26,12 @@ import {
 
 function usePreviewSize() {
 	const canvasSize = useEditor(
-		(e) => e.project.getActive()?.settings.canvasSize,
+		(e) => e.project.getActiveOrNull()?.settings.canvasSize,
 	);
 
 	return {
-		width: canvasSize?.width,
-		height: canvasSize?.height,
+		width: canvasSize?.width ?? 1920,
+		height: canvasSize?.height ?? 1080,
 	};
 }
 
@@ -103,7 +103,7 @@ function RenderTreeController() {
 	const { width, height } = usePreviewSize();
 
 	useDeepCompareEffect(() => {
-		if (!activeProject) return;
+		if (!activeProject || !width || !height) return;
 
 		const duration = editor.timeline.getTotalDuration();
 		const renderTree = buildScene({

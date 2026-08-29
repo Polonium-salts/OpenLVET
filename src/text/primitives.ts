@@ -260,6 +260,8 @@ export function drawMeasuredTextLayout({
 	textColor,
 	background,
 	backgroundColor,
+	stroke,
+	shadow,
 	textBaseline = "middle",
 }: {
 	ctx: TextCanvasContext;
@@ -267,12 +269,13 @@ export function drawMeasuredTextLayout({
 	textColor: string;
 	background?: ResolvedTextBackgroundLike | null;
 	backgroundColor?: string;
+	stroke?: { enabled: boolean; color: string; width: number };
+	shadow?: { enabled: boolean; color: string; offsetX: number; offsetY: number; blur: number };
 	textBaseline?: CanvasTextBaseline;
 }): void {
 	ctx.font = layout.fontString;
 	ctx.textAlign = layout.textAlign;
 	ctx.textBaseline = textBaseline;
-	ctx.fillStyle = textColor;
 	setCanvasLetterSpacing({ ctx, letterSpacingPx: layout.letterSpacing });
 
 	if (
@@ -309,10 +312,42 @@ export function drawMeasuredTextLayout({
 				radius,
 			);
 			ctx.fill();
-			ctx.fillStyle = textColor;
 		}
 	}
 
+	const scaleFactor = layout.scaledFontSize / 15;
+
+	// 1. Draw Shadow if enabled
+	if (shadow?.enabled && shadow.color) {
+		ctx.save();
+		ctx.shadowColor = shadow.color;
+		ctx.shadowOffsetX = (shadow.offsetX ?? 2) * scaleFactor;
+		ctx.shadowOffsetY = (shadow.offsetY ?? 2) * scaleFactor;
+		ctx.shadowBlur = (shadow.blur ?? 0) * scaleFactor;
+		ctx.fillStyle = textColor;
+		for (let index = 0; index < layout.lines.length; index++) {
+			const lineY = index * layout.lineHeightPx - layout.block.visualCenterOffset;
+			ctx.fillText(layout.lines[index], 0, lineY);
+		}
+		ctx.restore();
+	}
+
+	// 2. Draw Stroke (包边 / 描边) if enabled
+	if (stroke?.enabled && stroke.color && (stroke.width ?? 0) > 0) {
+		ctx.save();
+		ctx.strokeStyle = stroke.color;
+		ctx.lineWidth = Math.max(1, stroke.width * scaleFactor * 0.8);
+		ctx.lineJoin = "round";
+		ctx.lineCap = "round";
+		for (let index = 0; index < layout.lines.length; index++) {
+			const lineY = index * layout.lineHeightPx - layout.block.visualCenterOffset;
+			ctx.strokeText(layout.lines[index], 0, lineY);
+		}
+		ctx.restore();
+	}
+
+	// 3. Fill text
+	ctx.fillStyle = textColor;
 	for (let index = 0; index < layout.lines.length; index++) {
 		const lineY = index * layout.lineHeightPx - layout.block.visualCenterOffset;
 		ctx.fillText(layout.lines[index], 0, lineY);

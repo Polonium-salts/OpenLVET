@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useEditor } from "@/editor/use-editor";
-import { TRANSITION_DEFINITIONS } from "../definitions";
+import { transitionsRegistry } from "../registry";
 import type { TransitionCategory, TransitionDefinition } from "../types";
 import { useTransitionsStore } from "../transitions-store";
 import { glTransitionPipeline } from "../gl/gl-transition-renderer";
@@ -14,19 +14,21 @@ import { toast } from "sonner";
 import { mediaTimeFromSeconds } from "@/wasm";
 import {
 	Search01Icon,
-	PlusSignIcon,
 	SparklesIcon,
 	ArrowRightDoubleIcon,
+	PuzzleIcon,
+	FlashIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
-const CATEGORIES: { id: TransitionCategory | "all"; label: string }[] = [
+const BASE_CATEGORIES: { id: TransitionCategory | string; label: string }[] = [
 	{ id: "all", label: "全部" },
 	{ id: "basic", label: "基础叠化" },
 	{ id: "motion", label: "运镜推拉" },
 	{ id: "shapes", label: "形状划像" },
 	{ id: "creative", label: "创意光效" },
 	{ id: "3d", label: "3D立体" },
+	{ id: "blur", label: "模糊转场" },
 ];
 
 export function TransitionsView() {
@@ -34,8 +36,50 @@ export function TransitionsView() {
 	const { activeCategory, setActiveCategory, searchQuery, setSearchQuery } =
 		useTransitionsStore();
 
+	const [sourceFilter, setSourceFilter] = useState<"all" | "builtin" | "plugin">("all");
+
+	const [allTransitions, setAllTransitions] = useState<TransitionDefinition[]>(
+		() => transitionsRegistry.getAll(),
+	);
+
+	useEffect(() => {
+		setAllTransitions(transitionsRegistry.getAll());
+		return transitionsRegistry.subscribe(() => {
+			setAllTransitions(transitionsRegistry.getAll());
+		});
+	}, []);
+
+	const builtinCount = useMemo(
+		() => allTransitions.filter((t) => !t.isPlugin && t.sourceType !== "plugin").length,
+		[allTransitions],
+	);
+
+	const pluginCount = useMemo(
+		() => allTransitions.filter((t) => t.isPlugin || t.sourceType === "plugin").length,
+		[allTransitions],
+	);
+
+	const categories = useMemo(() => {
+		const knownIds = new Set(BASE_CATEGORIES.map((c) => c.id));
+		const extra: { id: string; label: string }[] = [];
+		allTransitions.forEach((t) => {
+			if (t.category && !knownIds.has(t.category)) {
+				knownIds.add(t.category);
+				extra.push({
+					id: t.category,
+					label: t.category.toUpperCase(),
+				});
+			}
+		});
+		return [...BASE_CATEGORIES, ...extra];
+	}, [allTransitions]);
+
 	const filteredTransitions = useMemo(() => {
-		return TRANSITION_DEFINITIONS.filter((def) => {
+		return allTransitions.filter((def) => {
+			const isPlugin = Boolean(def.isPlugin || def.sourceType === "plugin");
+			if (sourceFilter === "builtin" && isPlugin) return false;
+			if (sourceFilter === "plugin" && !isPlugin) return false;
+
 			if (activeCategory !== "all" && def.category !== activeCategory) {
 				return false;
 			}
@@ -43,12 +87,13 @@ export function TransitionsView() {
 				const q = searchQuery.toLowerCase().trim();
 				const matchName = def.name.toLowerCase().includes(q);
 				const matchId = def.id.toLowerCase().includes(q);
-				const matchKw = def.keywords.some((k) => k.toLowerCase().includes(q));
-				return matchName || matchId || matchKw;
+				const matchPlugin = def.pluginName?.toLowerCase().includes(q);
+				const matchKw = def.keywords?.some((k) => k.toLowerCase().includes(q));
+				return matchName || matchId || matchKw || matchPlugin;
 			}
 			return true;
 		});
-	}, [activeCategory, searchQuery]);
+	}, [allTransitions, sourceFilter, activeCategory, searchQuery]);
 
 	const handleAddTransition = (transition: TransitionDefinition) => {
 		const scene = editor.scenes.getActiveScene();
@@ -121,9 +166,17 @@ export function TransitionsView() {
 							className="size-4 text-primary"
 						/>
 						<span>转场库</span>
-						<span className="text-[11px] text-muted-foreground font-normal bg-accent/60 px-1.5 py-0.5 rounded-full ml-1">
-							{TRANSITION_DEFINITIONS.length}
-						</span>
+						<div className="flex items-center gap-1 ml-1">
+							<span className="text-[10px] text-muted-foreground font-medium bg-accent/60 px-1.5 py-0.5 rounded-full" title={`内置转场: ${builtinCount} 款`}>
+								内置 {builtinCount}
+							</span>
+							{pluginCount > 0 && (
+								<span className="text-[10px] text-purple-400 font-semibold bg-purple-500/15 border border-purple-500/30 px-1.5 py-0.5 rounded-full flex items-center gap-0.5" title={`插件转场: ${pluginCount} 款`}>
+									<HugeiconsIcon icon={FlashIcon} className="size-2.5" />
+									插件 {pluginCount}
+								</span>
+							)}
+						</div>
 					</div>
 					<Button
 						variant="outline"
@@ -150,18 +203,62 @@ export function TransitionsView() {
 					<Input
 						value={searchQuery}
 						onChange={(e) => setSearchQuery(e.target.value)}
-						placeholder="搜索转场效果（如叠化、推入、光晕）..."
+						placeholder="搜索转场效果、插件名称或关键词..."
 						className="h-8 pl-8 text-xs bg-accent/20 border-border/40"
 					/>
 				</div>
 
+				{/* Source Distinction Segmented Tabs */}
+				<div className="grid grid-cols-3 gap-1 p-0.5 bg-muted/40 rounded-lg border border-border/30 text-xs">
+					<button
+						type="button"
+						onClick={() => setSourceFilter("all")}
+						className={cn(
+							"py-1 rounded-md text-center transition-all font-medium flex items-center justify-center gap-1",
+							sourceFilter === "all"
+								? "bg-background text-foreground shadow-xs font-semibold"
+								: "text-muted-foreground hover:text-foreground",
+						)}
+					>
+						<span>全部</span>
+						<span className="text-[10px] opacity-70 font-mono">({allTransitions.length})</span>
+					</button>
+					<button
+						type="button"
+						onClick={() => setSourceFilter("builtin")}
+						className={cn(
+							"py-1 rounded-md text-center transition-all font-medium flex items-center justify-center gap-1",
+							sourceFilter === "builtin"
+								? "bg-background text-foreground shadow-xs font-semibold"
+								: "text-muted-foreground hover:text-foreground",
+						)}
+					>
+						<span>官方内置</span>
+						<span className="text-[10px] opacity-70 font-mono">({builtinCount})</span>
+					</button>
+					<button
+						type="button"
+						onClick={() => setSourceFilter("plugin")}
+						className={cn(
+							"py-1 rounded-md text-center transition-all font-medium flex items-center justify-center gap-1",
+							sourceFilter === "plugin"
+								? "bg-background text-purple-400 shadow-xs font-semibold"
+								: "text-muted-foreground hover:text-foreground",
+						)}
+					>
+						<HugeiconsIcon icon={FlashIcon} className="size-3 text-purple-400" />
+						<span>插件扩展</span>
+						<span className="text-[10px] opacity-70 font-mono text-purple-400">({pluginCount})</span>
+					</button>
+				</div>
+
 				{/* Category Tabs */}
 				<div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hidden pb-0.5">
-					{CATEGORIES.map((cat) => (
+					{categories.map((cat) => (
 						<button
 							key={cat.id}
 							type="button"
-							onClick={() => setActiveCategory(cat.id)}
+							onClick={() => setActiveCategory(cat.id as any)}
 							className={cn(
 								"shrink-0 px-2.5 py-1 rounded-full text-xs transition-all font-medium",
 								activeCategory === cat.id
@@ -181,6 +278,16 @@ export function TransitionsView() {
 					<div className="flex flex-col items-center justify-center h-48 text-center text-muted-foreground text-xs gap-2">
 						<HugeiconsIcon icon={ArrowRightDoubleIcon} className="size-8 text-muted-foreground/40" />
 						<span>未找到匹配的转场效果</span>
+						{sourceFilter !== "all" && (
+							<Button
+								variant="ghost"
+								size="sm"
+								className="text-xs text-primary hover:underline h-7"
+								onClick={() => setSourceFilter("all")}
+							>
+								清除来源筛选
+							</Button>
+						)}
 					</div>
 				) : (
 					<div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -208,6 +315,8 @@ function TransitionCard({
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const [isHovered, setIsHovered] = useState(false);
 	const animRef = useRef<number | null>(null);
+
+	const isPlugin = Boolean(transition.isPlugin || transition.sourceType === "plugin");
 
 	// Offscreen sample textures for preview
 	const texturesRef = useRef<{
@@ -317,14 +426,28 @@ function TransitionCard({
 		<div
 			onMouseEnter={() => setIsHovered(true)}
 			onMouseLeave={() => setIsHovered(false)}
-			className="relative aspect-video w-full bg-black/40 overflow-hidden"
+			className="relative aspect-video w-full bg-black/40 overflow-hidden group/thumb"
 		>
 			<canvas
 				ref={canvasRef}
 				width={120}
 				height={68}
-				className="size-full object-cover transition-transform duration-200 group-hover:scale-105"
+				className="size-full object-cover transition-transform duration-200 group-hover/thumb:scale-105"
 			/>
+			{/* Distinct Badge for Plugin vs Built-in */}
+			{isPlugin ? (
+				<div
+					className="absolute top-1.5 right-1.5 z-10 flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-purple-600/90 backdrop-blur-md text-white text-[9px] font-semibold shadow-xs border border-purple-400/40 pointer-events-none"
+					title={transition.pluginName ? `来自插件: ${transition.pluginName}` : "插件转场预设"}
+				>
+					<HugeiconsIcon icon={FlashIcon} className="size-2.5" />
+					<span>插件</span>
+				</div>
+			) : (
+				<div className="absolute top-1.5 right-1.5 z-10 flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-zinc-300 text-[9px] font-medium border border-white/10 opacity-0 group-hover/thumb:opacity-100 transition-opacity pointer-events-none">
+					<span>内置</span>
+				</div>
+			)}
 		</div>
 	);
 

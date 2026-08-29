@@ -9,16 +9,22 @@ export type TransitionCategory =
 	| "3d"
 	| "blur";
 
+export type TransitionSourceType = "builtin" | "plugin" | "custom";
+
 export interface TransitionDefinition {
 	id: string;
 	name: string;
-	category: TransitionCategory;
+	category: TransitionCategory | string;
 	keywords: string[];
 	glsl: string;
 	defaultParams?: ParamValues;
 	params?: ParamDefinition[];
 	author?: string;
 	license?: string;
+	isPlugin?: boolean;
+	sourceType?: TransitionSourceType;
+	pluginId?: string;
+	pluginName?: string;
 }
 
 export interface TrackTransition {

@@ -19,7 +19,11 @@ import {
 } from "@/text/measure-element";
 import { evaluateTextAnimation } from "@/text/animation/evaluator";
 import type { TextAnimationState } from "@/text/animation/types";
-import { resolveColorAtTime, resolveOpacityAtTime } from "@/animation/values";
+import {
+	resolveColorAtTime,
+	resolveOpacityAtTime,
+	resolveNumberAtTime,
+} from "@/animation/values";
 import { resolveTransformAtTime } from "@/rendering/animation-values";
 import { videoCache } from "@/services/video-cache/service";
 import type { CanvasRenderer } from "./canvas-renderer";
@@ -338,7 +342,9 @@ function resolveTextNode({
 	});
 	const background = buildTextBackgroundFromElement({ element: node.params });
 
-	const localTimeSeconds = mediaTimeToSeconds({ time: localTime });
+	const localTimeSeconds = mediaTimeToSeconds({
+		time: roundMediaTime({ time: localTime }),
+	});
 	const totalDurationSeconds = mediaTimeToSeconds({ time: node.params.duration });
 	const rawContent = typeof node.params.params.content === "string" ? node.params.params.content : "";
 	const animationConfig = (node.params.params as any).textAnimation as TextAnimationState | undefined;
@@ -388,6 +394,64 @@ function resolveTextNode({
 				}
 			: node.params;
 
+	const strokeEnabled = Boolean(node.params.params["stroke.enabled"]);
+	const strokeColor = resolveColorAtTime({
+		baseColor:
+			typeof node.params.params["stroke.color"] === "string"
+				? node.params.params["stroke.color"]
+				: "#000000",
+		animations: node.params.animations,
+		propertyPath: "stroke.color",
+		localTime,
+	});
+	const strokeWidth = resolveNumberAtTime({
+		baseValue:
+			typeof node.params.params["stroke.width"] === "number"
+				? node.params.params["stroke.width"]
+				: 2,
+		animations: node.params.animations,
+		propertyPath: "stroke.width",
+		localTime,
+	});
+
+	const shadowEnabled = Boolean(node.params.params["shadow.enabled"]);
+	const shadowColor = resolveColorAtTime({
+		baseColor:
+			typeof node.params.params["shadow.color"] === "string"
+				? node.params.params["shadow.color"]
+				: "#000000",
+		animations: node.params.animations,
+		propertyPath: "shadow.color",
+		localTime,
+	});
+	const shadowOffsetX = resolveNumberAtTime({
+		baseValue:
+			typeof node.params.params["shadow.offsetX"] === "number"
+				? node.params.params["shadow.offsetX"]
+				: 2,
+		animations: node.params.animations,
+		propertyPath: "shadow.offsetX",
+		localTime,
+	});
+	const shadowOffsetY = resolveNumberAtTime({
+		baseValue:
+			typeof node.params.params["shadow.offsetY"] === "number"
+				? node.params.params["shadow.offsetY"]
+				: 2,
+		animations: node.params.animations,
+		propertyPath: "shadow.offsetY",
+		localTime,
+	});
+	const shadowBlur = resolveNumberAtTime({
+		baseValue:
+			typeof node.params.params["shadow.blur"] === "number"
+				? node.params.params["shadow.blur"]
+				: 0,
+		animations: node.params.animations,
+		propertyPath: "shadow.blur",
+		localTime,
+	});
+
 	return {
 		transform: animatedTransform,
 		opacity: animatedOpacity,
@@ -406,6 +470,18 @@ function resolveTextNode({
 			propertyPath: "background.color",
 			localTime,
 		}),
+		stroke: strokeEnabled
+			? { enabled: true, color: strokeColor, width: strokeWidth }
+			: undefined,
+		shadow: shadowEnabled
+			? {
+					enabled: true,
+					color: shadowColor,
+					offsetX: shadowOffsetX,
+					offsetY: shadowOffsetY,
+					blur: shadowBlur,
+				}
+			: undefined,
 		effectPasses: resolveEffectPassGroups({
 			effects: node.params.effects,
 			animations: node.params.animations,

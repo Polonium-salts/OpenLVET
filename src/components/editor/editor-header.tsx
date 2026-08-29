@@ -34,7 +34,9 @@ export function EditorHeader() {
 	return (
 		<header className="bg-background/95 border-b border-border/40 flex h-[3.2rem] items-center justify-between px-3 select-none">
 			<div className="flex items-center gap-2">
-				<ProjectDropdown />
+				<div className="w-[58px] flex items-center justify-center shrink-0">
+					<ProjectDropdown />
+				</div>
 				<div className="h-4 w-px bg-border/40 mx-0.5" />
 				<EditableProjectName />
 				<div className="hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-500 font-normal">

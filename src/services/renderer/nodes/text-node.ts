@@ -19,6 +19,8 @@ export interface ResolvedTextNodeState {
 	opacity: number;
 	textColor: string;
 	backgroundColor: string;
+	stroke?: { enabled: boolean; color: string; width: number };
+	shadow?: { enabled: boolean; color: string; offsetX: number; offsetY: number; blur: number };
 	effectPasses: EffectPass[][];
 	measuredText: MeasuredTextElement;
 }
@@ -54,6 +56,8 @@ export function renderTextToContext({
 		textColor: resolved.textColor,
 		background: resolved.measuredText.resolvedBackground,
 		backgroundColor: resolved.backgroundColor,
+		stroke: resolved.stroke,
+		shadow: resolved.shadow,
 		textBaseline: baseline,
 	});
 

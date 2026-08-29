@@ -4,6 +4,7 @@ export class IndexedDBAdapter<T> implements StorageAdapter<T> {
 	private dbName: string;
 	private storeName: string;
 	private version: number;
+	private memoryStore = new Map<string, T>();
 
 	constructor({
 		dbName,
@@ -20,6 +21,9 @@ export class IndexedDBAdapter<T> implements StorageAdapter<T> {
 	}
 
 	private async getDB(): Promise<IDBDatabase> {
+		if (typeof indexedDB === "undefined") {
+			throw new Error("indexedDB is not supported in this environment");
+		}
 		return new Promise((resolve, reject) => {
 			const request = indexedDB.open(this.dbName, this.version);
 
@@ -36,6 +40,9 @@ export class IndexedDBAdapter<T> implements StorageAdapter<T> {
 	}
 
 	async get(key: string): Promise<T | null> {
+		if (typeof indexedDB === "undefined") {
+			return this.memoryStore.get(key) || null;
+		}
 		const db = await this.getDB();
 		const transaction = db.transaction([this.storeName], "readonly");
 		const store = transaction.objectStore(this.storeName);
@@ -54,6 +61,10 @@ export class IndexedDBAdapter<T> implements StorageAdapter<T> {
 		key: string;
 		value: T;
 	}): Promise<void> {
+		if (typeof indexedDB === "undefined") {
+			this.memoryStore.set(key, value);
+			return;
+		}
 		const db = await this.getDB();
 		const transaction = db.transaction([this.storeName], "readwrite");
 		const store = transaction.objectStore(this.storeName);
@@ -66,6 +77,10 @@ export class IndexedDBAdapter<T> implements StorageAdapter<T> {
 	}
 
 	async remove(key: string): Promise<void> {
+		if (typeof indexedDB === "undefined") {
+			this.memoryStore.delete(key);
+			return;
+		}
 		const db = await this.getDB();
 		const transaction = db.transaction([this.storeName], "readwrite");
 		const store = transaction.objectStore(this.storeName);
@@ -78,6 +93,9 @@ export class IndexedDBAdapter<T> implements StorageAdapter<T> {
 	}
 
 	async list(): Promise<string[]> {
+		if (typeof indexedDB === "undefined") {
+			return Array.from(this.memoryStore.keys());
+		}
 		const db = await this.getDB();
 		const transaction = db.transaction([this.storeName], "readonly");
 		const store = transaction.objectStore(this.storeName);
@@ -90,6 +108,9 @@ export class IndexedDBAdapter<T> implements StorageAdapter<T> {
 	}
 
 	async getAll(): Promise<T[]> {
+		if (typeof indexedDB === "undefined") {
+			return Array.from(this.memoryStore.values());
+		}
 		const db = await this.getDB();
 		const transaction = db.transaction([this.storeName], "readonly");
 		const store = transaction.objectStore(this.storeName);
@@ -102,6 +123,10 @@ export class IndexedDBAdapter<T> implements StorageAdapter<T> {
 	}
 
 	async clear(): Promise<void> {
+		if (typeof indexedDB === "undefined") {
+			this.memoryStore.clear();
+			return;
+		}
 		const db = await this.getDB();
 		const transaction = db.transaction([this.storeName], "readwrite");
 		const store = transaction.objectStore(this.storeName);

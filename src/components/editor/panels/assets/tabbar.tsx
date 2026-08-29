@@ -101,46 +101,52 @@ export function TabBar() {
 						{dynamicTabs.map((dynTab) => {
 							const isActive = activeTab === dynTab.id;
 							return (
-								<button
-									key={dynTab.id}
-									type="button"
-									aria-label={dynTab.label}
-									onClick={() => setActiveTab(dynTab.id)}
-									className={cn(
-										"group relative flex w-full flex-col items-center justify-center gap-1 rounded-md py-2 px-1 text-center transition-all duration-150",
-										isActive
-											? "bg-accent/80 text-primary font-medium shadow-xs"
-											: "text-muted-foreground hover:bg-accent/40 hover:text-foreground",
-									)}
-								>
-									{isActive && (
-										<div className="absolute left-0 top-1/2 h-4 w-1 -translate-y-1/2 rounded-r-full bg-primary" />
-									)}
-									<div
-										className={cn(
-											"flex size-5 items-center justify-center transition-transform group-hover:scale-105",
-											isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground",
-										)}
-									>
-										{dynTab.icon ? (
-											typeof dynTab.icon === "string" ? (
-												<span>{dynTab.icon}</span>
-											) : (
-												dynTab.icon
-											)
-										) : (
-											<HugeiconsIcon icon={PuzzleIcon} className="size-4" />
-										)}
-									</div>
-									<span
-										className={cn(
-											"text-[11px] leading-tight tracking-tight truncate max-w-[50px]",
-											isActive ? "text-primary font-semibold" : "text-muted-foreground group-hover:text-foreground",
-										)}
-									>
+								<Tooltip key={dynTab.id}>
+									<TooltipTrigger asChild>
+										<button
+											type="button"
+											aria-label={dynTab.label}
+											onClick={() => setActiveTab(dynTab.id)}
+											className={cn(
+												"group relative flex w-full flex-col items-center justify-center gap-1 rounded-md py-2 px-1 text-center transition-all duration-150",
+												isActive
+													? "bg-accent/80 text-primary font-medium shadow-xs"
+													: "text-muted-foreground hover:bg-accent/40 hover:text-foreground",
+											)}
+										>
+											{isActive && (
+												<div className="absolute left-0 top-1/2 h-4 w-1 -translate-y-1/2 rounded-r-full bg-primary" />
+											)}
+											<div
+												className={cn(
+													"flex size-5 items-center justify-center transition-transform group-hover:scale-105",
+													isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground",
+												)}
+											>
+												{dynTab.icon ? (
+													typeof dynTab.icon === "string" ? (
+														<span className="text-sm leading-none">{dynTab.icon}</span>
+													) : (
+														dynTab.icon
+													)
+												) : (
+													<HugeiconsIcon icon={PuzzleIcon} className="size-4" />
+												)}
+											</div>
+											<span
+												className={cn(
+													"text-[10.5px] leading-tight tracking-tight truncate w-full text-center px-0.5",
+													isActive ? "text-primary font-semibold" : "text-muted-foreground group-hover:text-foreground",
+												)}
+											>
+												{dynTab.label}
+											</span>
+										</button>
+									</TooltipTrigger>
+									<TooltipContent side="right" className="text-xs font-medium">
 										{dynTab.label}
-									</span>
-								</button>
+									</TooltipContent>
+								</Tooltip>
 							);
 						})}
 					</>

@@ -5,6 +5,7 @@ import { usePluginStore } from "../plugin-store";
 import { pluginManager } from "../plugin-manager";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
 	PuzzleIcon,
 	Download01Icon,
@@ -13,6 +14,8 @@ import {
 	Delete02Icon,
 	Folder03Icon,
 	FlashIcon,
+	SparklesIcon,
+	Upload01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { toast } from "sonner";
@@ -208,45 +211,54 @@ export function PluginsView() {
 								return (
 									<div
 										key={manifest.id}
-										className="p-3 rounded-lg border bg-card hover:border-border transition-all space-y-2"
+										className={`p-3 rounded-xl border transition-all space-y-2.5 ${
+											enabled
+												? "bg-card/70 border-border/80 hover:border-primary/40 hover:bg-card/90"
+												: "bg-muted/20 border-border/40 opacity-75"
+										}`}
 									>
-										<div className="flex items-start justify-between">
-											<div className="space-y-0.5">
-												<div className="flex items-center gap-1.5">
-													<h4 className="text-xs font-semibold text-foreground">
+										<div className="flex items-start justify-between gap-2">
+											<div className="space-y-1 flex-1 min-w-0">
+												<div className="flex items-center gap-1.5 flex-wrap">
+													<h4 className="text-xs font-semibold text-foreground truncate max-w-[180px]">
 														{manifest.name}
 													</h4>
 													<span
-														className={`text-[9px] px-1 py-0.2 rounded font-medium ${sourceBadge.color}`}
+														className={`text-[9px] px-1.5 py-0.2 rounded font-medium ${sourceBadge.color}`}
 													>
 														{sourceBadge.label}
 													</span>
+													<span className="text-[10px] font-mono text-muted-foreground">
+														v{manifest.version}
+													</span>
 												</div>
-												<p className="text-[11px] text-muted-foreground line-clamp-1">
+												<p className="text-[11px] text-muted-foreground line-clamp-2 leading-tight">
 													{manifest.description}
 												</p>
 											</div>
 										</div>
 
-										<div className="pt-2 border-t border-border/30 flex items-center justify-between">
-											<div className="flex items-center gap-1">
-												{manifest.configSchema && manifest.configSchema.length > 0 && (
-													<Button
-														variant="ghost"
-														size="icon"
-														onClick={() => openPluginSettings(manifest.id)}
-														className="size-6 text-muted-foreground hover:text-foreground"
-														title="配置参数"
-													>
-														<HugeiconsIcon icon={Settings01Icon} className="size-3.5" />
-													</Button>
-												)}
+										<div className="pt-2 border-t border-border/40 flex items-center justify-between">
+											<div className="flex items-center bg-muted/40 p-0.5 rounded-lg border border-border/40">
+												<Button
+													variant="ghost"
+													size="icon"
+													onClick={() => openPluginSettings(manifest.id)}
+													className="size-6 text-muted-foreground hover:text-foreground rounded-md"
+													title={
+														manifest.configSchema && manifest.configSchema.length > 0
+															? "配置参数与说明文档"
+															: "查看插件说明文档"
+													}
+												>
+													<HugeiconsIcon icon={Settings01Icon} className="size-3.5" />
+												</Button>
 
 												<Button
 													variant="ghost"
 													size="icon"
 													onClick={() => handleExportZip(manifest.id, manifest.name)}
-													className="size-6 text-muted-foreground hover:text-foreground"
+													className="size-6 text-muted-foreground hover:text-foreground rounded-md"
 													title="导出为 .zip 插件包"
 												>
 													<HugeiconsIcon icon={Download01Icon} className="size-3.5" />
@@ -256,21 +268,22 @@ export function PluginsView() {
 													variant="ghost"
 													size="icon"
 													onClick={() => handleUninstall(manifest.id)}
-													className="size-6 text-muted-foreground hover:text-destructive"
+													className="size-6 text-muted-foreground hover:text-destructive rounded-md"
 													title="卸载插件"
 												>
 													<HugeiconsIcon icon={Delete02Icon} className="size-3.5" />
 												</Button>
 											</div>
 
-											<Button
-												size="sm"
-												variant={enabled ? "outline" : "default"}
-												onClick={() => handleTogglePlugin(manifest.id)}
-												className="text-xs h-6 px-2.5"
-											>
-												{enabled ? "禁用" : "启用"}
-											</Button>
+											<div className="flex items-center gap-1.5">
+												<span className="text-[11px] text-muted-foreground font-medium">
+													{enabled ? "启用" : "禁用"}
+												</span>
+												<Switch
+													checked={enabled}
+													onCheckedChange={() => handleTogglePlugin(manifest.id)}
+												/>
+											</div>
 										</div>
 									</div>
 								);

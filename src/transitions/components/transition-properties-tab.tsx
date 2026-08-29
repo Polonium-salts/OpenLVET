@@ -1,11 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useEditor } from "@/editor/use-editor";
 import { useTransitionsStore } from "../transitions-store";
-import {
-	TRANSITION_DEFINITIONS,
-	getTransitionDefinition,
-} from "../definitions";
+import { getTransitionDefinition } from "../definitions";
+import { transitionsRegistry } from "../registry";
+import type { TransitionDefinition } from "../types";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -31,6 +31,17 @@ export function TransitionPropertiesTab() {
 	const editor = useEditor();
 	const { selectedTransitionRef, setSelectedTransitionRef } =
 		useTransitionsStore();
+
+	const [allTransitions, setAllTransitions] = useState<TransitionDefinition[]>(
+		() => transitionsRegistry.getAll(),
+	);
+
+	useEffect(() => {
+		setAllTransitions(transitionsRegistry.getAll());
+		return transitionsRegistry.subscribe(() => {
+			setAllTransitions(transitionsRegistry.getAll());
+		});
+	}, []);
 
 	const activeScene = useEditor((e) => e.scenes.getActiveScene());
 
@@ -105,11 +116,18 @@ export function TransitionPropertiesTab() {
 						<HugeiconsIcon icon={ArrowRightDoubleIcon} className="size-4" />
 					</div>
 					<div>
-						<h3 className="font-semibold text-sm text-foreground">
-							{def?.name ?? "转场设置"}
-						</h3>
+						<div className="flex items-center gap-1.5">
+							<h3 className="font-semibold text-sm text-foreground">
+								{def?.name ?? "转场设置"}
+							</h3>
+							{(def?.isPlugin || def?.sourceType === "plugin") && (
+								<span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-purple-500/15 text-purple-400 border border-purple-500/30">
+									插件
+								</span>
+							)}
+						</div>
 						<span className="text-[11px] text-muted-foreground">
-							视频切点平滑过渡
+							{def?.pluginName ? `由插件「${def.pluginName}」提供` : "视频切点平滑过渡"}
 						</span>
 					</div>
 				</div>
@@ -135,11 +153,21 @@ export function TransitionPropertiesTab() {
 						<SelectValue placeholder="选择转场" />
 					</SelectTrigger>
 					<SelectContent className="max-h-64">
-						{TRANSITION_DEFINITIONS.map((item) => (
-							<SelectItem key={item.id} value={item.id} className="text-xs">
-								{item.name}
-							</SelectItem>
-						))}
+						{allTransitions.map((item) => {
+							const isPlugin = Boolean(item.isPlugin || item.sourceType === "plugin");
+							return (
+								<SelectItem key={item.id} value={item.id} className="text-xs">
+									<div className="flex items-center justify-between w-full gap-2">
+										<span>{item.name}</span>
+										{isPlugin && (
+											<span className="text-[9px] px-1 py-0.2 rounded bg-purple-500/20 text-purple-400 font-mono">
+												插件
+											</span>
+										)}
+									</div>
+								</SelectItem>
+							);
+						})}
 					</SelectContent>
 				</Select>
 			</div>

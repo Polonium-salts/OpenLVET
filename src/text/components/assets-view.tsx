@@ -162,8 +162,8 @@ export function TextView() {
 				let currentOffset = 0;
 				cues = lines.map((line) => {
 					const cue: SubtitleCue = {
-						start: currentOffset,
-						end: currentOffset + 3,
+						startTime: currentOffset,
+						duration: 3,
 						text: line,
 					};
 					currentOffset += 3;
@@ -306,7 +306,7 @@ export function TextView() {
 												className="relative size-full flex flex-col items-center justify-center p-2 rounded-lg overflow-hidden border border-border/50 transition-all group select-none"
 												style={{
 													background:
-														template.previewBackground ||
+														template.previewStyle.background ||
 														"linear-gradient(135deg, #18181b 0%, #09090b 100%)",
 												}}
 											>
@@ -333,22 +333,39 @@ export function TextView() {
 													className="w-full text-center px-1 font-bold line-clamp-2 leading-snug drop-shadow-md select-none pointer-events-none"
 													style={{
 														fontFamily:
+															template.previewStyle.fontFamily ||
 															template.params.fontFamily ||
 															"system-ui, sans-serif",
 														fontSize: `${Math.min(
 															16,
 															Math.max(12, template.params.fontSize / 3.5),
 														)}px`,
-														color: template.params.color || "#ffffff",
-														letterSpacing: `${template.params.letterSpacing || 0}px`,
-														WebkitTextStroke: template.params.border?.width
-															? `${Math.max(1, template.params.border.width / 4)}px ${template.params.border.color}`
-															: undefined,
-														textShadow: template.params.shadow?.blur
-															? `${template.params.shadow.offsetX / 4}px ${template.params.shadow.offsetY / 4}px ${template.params.shadow.blur / 4}px ${template.params.shadow.color}`
-															: undefined,
-														fontStyle: template.params.fontStyle || "normal",
-														fontWeight: template.params.fontWeight || "bold",
+														color:
+															template.previewStyle.color ||
+															template.params.color ||
+															"#ffffff",
+														letterSpacing:
+															template.previewStyle.letterSpacing ||
+															`${template.params.letterSpacing || 0}px`,
+														WebkitTextStroke:
+															template.previewStyle.WebkitTextStroke,
+														textShadow: template.previewStyle.textShadow,
+														fontStyle:
+															template.previewStyle.fontStyle ||
+															template.params.fontStyle ||
+															"normal",
+														fontWeight:
+															template.previewStyle.fontWeight ||
+															template.params.fontWeight ||
+															"bold",
+														borderRadius: template.previewStyle.borderRadius,
+														padding: template.previewStyle.padding,
+														backgroundImage:
+															template.previewStyle.backgroundImage,
+														WebkitBackgroundClip:
+															template.previewStyle.WebkitBackgroundClip,
+														WebkitTextFillColor:
+															template.previewStyle.WebkitTextFillColor,
 													}}
 												>
 													{template.previewText || template.name}

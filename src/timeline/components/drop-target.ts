@@ -21,7 +21,7 @@ function findElementAtPosition({
 	mouseX: number;
 	tracks: TimelineTrack[];
 	trackIndex: number;
-	targetElementTypes: string[];
+	targetElementTypes: readonly string[];
 	pixelsPerSecond: number;
 	zoomLevel: number;
 }): { elementId: string; trackId: string } | null {

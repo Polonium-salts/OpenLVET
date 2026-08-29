@@ -115,7 +115,7 @@ function getTargetElementTypesForDrag({
 	dragData,
 }: {
 	dragData: TimelineDragData;
-}): string[] | undefined {
+}): readonly string[] | undefined {
 	if (dragData.type === "effect") return dragData.targetElementTypes;
 	if (dragData.type === "media" || dragData.type === "stock") return dragData.targetElementTypes;
 	return undefined;
@@ -407,7 +407,7 @@ export class DragDropController {
 		dragData: Extract<TimelineDragData, { type: "transition" }>;
 	}): void {
 		const tracks = orderedTracks({ sceneTracks: this.config.getSceneTracks() });
-		let track = tracks[target.trackIndex];
+		let track: TimelineTrack | undefined = tracks[target.trackIndex];
 		if (!track || track.type !== "video") {
 			track = tracks.find((t) => t.type === "video");
 		}

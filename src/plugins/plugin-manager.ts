@@ -14,6 +14,8 @@ import type {
 } from "./types";
 import { toast } from "sonner";
 
+import { getPresetPlugins } from "./preset-plugins";
+
 const STORAGE_KEY = "openlvet:installed_plugins";
 
 export class PluginManager {
@@ -43,12 +45,26 @@ export class PluginManager {
 		this.editor = editor;
 		this.initialized = true;
 
-		// 1. Load stored records from localStorage and purge any legacy builtin records
+		// 1. Load stored records from localStorage
 		const storedRecords = this.loadStoredRecords();
-		for (const [id, record] of Object.entries(storedRecords)) {
-			if (record.sourceType === "builtin" || record.manifest.builtin) {
-				delete storedRecords[id];
+
+		// 2. Seed official preset plugins (e.g. Pexels Stock Hub) if not present
+		try {
+			const presetPlugins = getPresetPlugins();
+			for (const [id, preset] of Object.entries(presetPlugins)) {
+				if (!storedRecords[id]) {
+					storedRecords[id] = preset;
+				} else if (storedRecords[id].sourceType === "builtin") {
+					storedRecords[id].rawSource = preset.rawSource;
+					storedRecords[id].manifest = {
+						...preset.manifest,
+						...storedRecords[id].manifest,
+						configSchema: preset.manifest.configSchema,
+					};
+				}
 			}
+		} catch (e) {
+			console.warn("Failed to load preset plugins:", e);
 		}
 
 		// 2. Load and evaluate custom plugins stored with source code
@@ -274,6 +290,7 @@ export class PluginManager {
 			sourceType,
 			sourceUrl,
 			rawSource: sourceCode,
+			readme: mod.manifest.readme || manifest.readme || records[manifest.id]?.readme,
 		};
 
 		records[manifest.id] = record;
@@ -363,6 +380,9 @@ export class PluginManager {
 	}
 
 	private loadStoredRecords(): Record<string, InstalledPluginRecord> {
+		if (typeof window === "undefined" || typeof localStorage === "undefined") {
+			return {};
+		}
 		try {
 			const raw = localStorage.getItem(STORAGE_KEY);
 			return raw ? JSON.parse(raw) : {};
@@ -372,6 +392,9 @@ export class PluginManager {
 	}
 
 	private saveStoredRecords(records: Record<string, InstalledPluginRecord>): void {
+		if (typeof window === "undefined" || typeof localStorage === "undefined") {
+			return;
+		}
 		try {
 			localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
 		} catch (e) {

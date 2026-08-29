@@ -191,15 +191,17 @@ export function StockView() {
 						</span>
 					</div>
 
-					<Button
-						size="sm"
-						className="h-7 text-xs gap-1 px-2.5 shadow-sm"
-						disabled={isImporting}
-						onClick={() => fileInputRef.current?.click()}
-					>
-						<HugeiconsIcon icon={Upload01Icon} className="size-3.5" />
-						{isImporting ? `导入中 ${importProgress}%` : "导入素材"}
-					</Button>
+					<div className="flex items-center gap-1.5">
+						<Button
+							size="sm"
+							className="h-7 text-xs gap-1 px-2.5 shadow-sm"
+							disabled={isImporting}
+							onClick={() => fileInputRef.current?.click()}
+						>
+							<HugeiconsIcon icon={Upload01Icon} className="size-3.5" />
+							{isImporting ? `导入中 ${importProgress}%` : "导入本地"}
+						</Button>
+					</div>
 				</div>
 
 				{/* Search & View Switcher */}
@@ -310,15 +312,17 @@ export function StockView() {
 									: "点击上方“导入素材”或拖拽音视频、图片文件到此处，添加后将在所有工程中永久共享"}
 							</p>
 							{!searchQuery && (
-								<Button
-									size="sm"
-									variant="outline"
-									className="gap-1.5 text-xs font-normal"
-									onClick={() => fileInputRef.current?.click()}
-								>
-									<HugeiconsIcon icon={Upload01Icon} className="size-3.5" />
-									立即导入素材
-								</Button>
+								<div className="flex items-center gap-2">
+									<Button
+										size="sm"
+										variant="outline"
+										className="gap-1.5 text-xs font-normal"
+										onClick={() => fileInputRef.current?.click()}
+									>
+										<HugeiconsIcon icon={Upload01Icon} className="size-3.5" />
+										导入本地素材
+									</Button>
+								</div>
 							)}
 						</div>
 					) : viewMode === "grid" ? (

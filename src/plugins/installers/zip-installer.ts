@@ -77,8 +77,10 @@ export function unpackPluginZip(
 		throw new Error("未在压缩包中找到插件主入口脚本 (如 index.js 或 main.js)");
 	}
 
-	// Gather extra text files
+	// Gather extra text files & extract README if present
 	const extraFiles: Record<string, string> = {};
+	let readmeContent: string | undefined;
+
 	for (const name of fileNames) {
 		if (
 			!name.endsWith("/") &&
@@ -86,7 +88,19 @@ export function unpackPluginZip(
 			name !== entryFileName
 		) {
 			try {
-				extraFiles[name] = strFromU8(unzipped[name]);
+				const content = strFromU8(unzipped[name]);
+				extraFiles[name] = content;
+				const lower = name.toLowerCase();
+				if (
+					!readmeContent &&
+					(lower.endsWith("readme.md") ||
+						lower.endsWith("readme.markdown") ||
+						lower.endsWith("readme.txt") ||
+						lower.endsWith("doc.md") ||
+						lower.endsWith("docs.md"))
+				) {
+					readmeContent = content;
+				}
 			} catch {
 				// Binary or unreadable
 			}
@@ -94,6 +108,9 @@ export function unpackPluginZip(
 	}
 
 	manifest.sourceCode = sourceCode;
+	if (readmeContent && !manifest.readme) {
+		manifest.readme = readmeContent;
+	}
 
 	return {
 		manifest,

@@ -1,6 +1,7 @@
 "use client";
 
 import { usePluginStore } from "../plugin-store";
+import type { PluginHeaderItemDefinition, PluginManifest } from "../types";
 import { Button } from "@/components/ui/button";
 import {
 	Tooltip,
@@ -43,8 +44,6 @@ export function PluginHeaderButton() {
 	);
 }
 
-import type { PluginHeaderItemDefinition, PluginManifest } from "../types";
-
 function DynamicHeaderItemRenderer({
 	item,
 	manifest,
@@ -52,7 +51,40 @@ function DynamicHeaderItemRenderer({
 	item: PluginHeaderItemDefinition;
 	manifest: PluginManifest;
 }) {
-	return <>{item.render({ plugin: manifest })}</>;
+	if (typeof item.render === "function") {
+		return <>{item.render({ plugin: manifest })}</>;
+	}
+
+	const content = (
+		<Button
+			variant="ghost"
+			size="sm"
+			onClick={item.onClick}
+			className="h-8 px-2.5 text-xs flex items-center gap-1.5 text-muted-foreground hover:text-foreground hover:bg-accent/60 border border-transparent hover:border-border/40 transition-all rounded-md"
+		>
+			{item.icon && (
+				typeof item.icon === "string" ? (
+					<span className="text-sm">{item.icon}</span>
+				) : (
+					item.icon
+				)
+			)}
+			{item.label && <span className="font-medium">{item.label}</span>}
+		</Button>
+	);
+
+	if (item.tooltip) {
+		return (
+			<Tooltip>
+				<TooltipTrigger asChild>{content}</TooltipTrigger>
+				<TooltipContent side="bottom" className="text-xs">
+					{item.tooltip}
+				</TooltipContent>
+			</Tooltip>
+		);
+	}
+
+	return content;
 }
 
 export function DynamicPluginHeaderItems({

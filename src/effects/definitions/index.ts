@@ -25,9 +25,13 @@ import {
 	zoomBlurEffect,
 	motionBlurEffect,
 } from "./lighting";
+import { chromaKeyEffect, lumaKeyEffect } from "./cutout";
 import type { EffectDefinition } from "../types";
 
 export const defaultEffects: EffectDefinition[] = [
+	// Cutout & Chroma Key
+	chromaKeyEffect,
+	lumaKeyEffect,
 	// Color & Adjustment
 	adjustmentEffect,
 	invertEffect,

@@ -101,6 +101,15 @@ export async function installPluginFromGit(
 				if (codeRes.ok) {
 					sourceCode = await codeRes.text();
 				}
+
+				// Try README.md
+				try {
+					const readmeRes = await fetch(`${rawBase}/README.md`);
+					if (readmeRes.ok && manifestData) {
+						manifestData.readme = await readmeRes.text();
+					}
+				} catch {}
+
 				break;
 			}
 		} catch {

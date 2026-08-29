@@ -3,6 +3,7 @@ import type { EditorCore } from "@/core";
 import type { EffectDefinition } from "@/effects/types";
 import type { TransitionDefinition } from "@/transitions/types";
 import type { PreviewOverlaySourceResult } from "@/preview/overlays";
+import type { TimelineElement } from "@/timeline/types";
 
 export type PluginCategory =
 	| "visuals"
@@ -51,6 +52,7 @@ export interface PluginManifest {
 	gitUrl?: string;
 	builtin?: boolean;
 	minAppVersion?: string;
+	readme?: string; // Markdown documentation
 	configSchema?: PluginConfigFieldSchema[];
 	defaultConfig?: Record<string, unknown>;
 	sourceCode?: string;
@@ -66,15 +68,23 @@ export interface PluginAssetTabDefinition {
 
 export interface PluginHeaderItemDefinition {
 	id: string;
+	label?: string;
+	icon?: ReactNode | string;
 	position?: "left" | "right";
 	order?: number;
-	render: (props: { plugin: PluginManifest }) => ReactNode;
+	tooltip?: string;
+	onClick?: () => void;
+	render?: (props: { plugin: PluginManifest }) => ReactNode;
 }
 
 export interface PluginToolbarItemDefinition {
 	id: string;
+	label?: string;
+	icon?: ReactNode | string;
 	order?: number;
-	render: (props: { plugin: PluginManifest }) => ReactNode;
+	tooltip?: string;
+	onClick?: () => void;
+	render?: (props: { plugin: PluginManifest }) => ReactNode;
 }
 
 export interface PluginPropertiesTabDefinition {
@@ -119,12 +129,14 @@ export interface PluginContext {
 	// Transitions
 	transitions: {
 		registerTransition: (definition: TransitionDefinition) => () => void;
+		unregisterTransition: (id: string) => void;
 	};
 
 	// Left Asset Panel Tabs
 	panels: {
 		registerAssetTab: (tab: PluginAssetTabDefinition) => () => void;
 		unregisterAssetTab: (id: string) => void;
+		setActiveAssetTab?: (id: string) => void;
 	};
 
 	// Top Navigation Header Items
@@ -183,6 +195,24 @@ export interface PluginContext {
 		) => () => void;
 	};
 
+	// Unified Stock Library Integration
+	stock?: {
+		addStockItem: (item: {
+			name: string;
+			type: "video" | "image" | "audio";
+			file?: File;
+			url?: string;
+			blob?: Blob;
+			thumbnailUrl?: string;
+			duration?: number;
+			width?: number;
+			height?: number;
+			fps?: number;
+			tags?: string[];
+		}) => Promise<{ id: string; name: string }>;
+		getStockItems: () => Promise<unknown[]>;
+	};
+
 	// UI Utilities
 	ui: {
 		showToast: (
@@ -219,4 +249,5 @@ export interface InstalledPluginRecord {
 	sourceType: "builtin" | "zip" | "git" | "url" | "code" | "file";
 	sourceUrl?: string;
 	rawSource?: string;
+	readme?: string;
 }

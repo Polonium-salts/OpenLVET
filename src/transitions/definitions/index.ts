@@ -395,5 +395,15 @@ export const TRANSITION_MAP = new Map<string, TransitionDefinition>(
 );
 
 export function getTransitionDefinition(id: string): TransitionDefinition | undefined {
+	try {
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
+		const { transitionsRegistry } = require("../registry");
+		if (transitionsRegistry) {
+			return transitionsRegistry.get(id);
+		}
+	} catch {}
 	return TRANSITION_MAP.get(id);
 }
+
+
+

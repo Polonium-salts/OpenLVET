@@ -459,7 +459,7 @@ export function TimelineElement({
 								invokeAction("toggle-source-audio");
 							}}
 						>
-							{sourceAudioLabel === "Extract audio" ? "分离音轨" : sourceAudioLabel}
+							{sourceAudioLabel}
 						</ContextMenuItem>
 					)}
 					{canElementBeHidden(element) && (

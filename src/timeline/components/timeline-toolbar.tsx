@@ -184,7 +184,7 @@ function ToolbarLeftSection() {
 							icon={isSelectedSourceAudioSeparated ? Unlink02Icon : Link02Icon}
 						/>
 					}
-					tooltip={sourceAudioLabel === "Extract audio" ? "分离音轨" : sourceAudioLabel}
+					tooltip={sourceAudioLabel}
 					disabled={!canToggleSelectedSourceAudio}
 					onClick={({ event }) =>
 						handleAction({ action: "toggle-source-audio", event })

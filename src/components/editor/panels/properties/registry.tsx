@@ -22,6 +22,8 @@ import {
 	MagicWand05Icon,
 	DashboardSpeed02Icon,
 	SparklesIcon,
+	Scissor01Icon,
+	ColorsIcon,
 } from "@hugeicons/core-free-icons";
 import { ElementParamsTab } from "./components/element-params-tab";
 import { ClipEffectsTab, StandaloneEffectTab } from "@/effects/components/effects-tab";
@@ -29,6 +31,8 @@ import { MasksTab } from "@/masks/components/masks-tab";
 import { SpeedTab } from "@/speed/components/speed-tab";
 import { GraphicTab } from "@/graphics/components/graphic-tab";
 import { TextAnimationTab } from "@/text/components/text-animation-tab";
+import { TextStylesTab } from "@/text/components/text-styles-tab";
+import { CutoutTab } from "@/cutout/components/cutout-tab";
 import { OcShapesIcon } from "@/components/icons";
 
 const TRANSFORM_PARAM_KEYS = [
@@ -62,6 +66,14 @@ const TEXT_PARAM_KEYS = [
 	"background.paddingY",
 	"background.offsetX",
 	"background.offsetY",
+	"stroke.enabled",
+	"stroke.color",
+	"stroke.width",
+	"shadow.enabled",
+	"shadow.color",
+	"shadow.offsetX",
+	"shadow.offsetY",
+	"shadow.blur",
 ] as const;
 
 export type TabContentProps = {
@@ -166,6 +178,19 @@ function buildMasksTab({
 	};
 }
 
+function buildCutoutTab({
+	element,
+}: {
+	element: VisualElement;
+}): PropertiesTabDef {
+	return {
+		id: "cutout",
+		label: "抠图",
+		icon: <HugeiconsIcon icon={Scissor01Icon} size={16} />,
+		content: ({ trackId }) => <CutoutTab element={element} trackId={trackId} />,
+	};
+}
+
 function buildClipEffectsTab({
 	element,
 }: {
@@ -225,6 +250,17 @@ function buildStandaloneEffectTab({
 	};
 }
 
+function buildTextStylesTab({ element }: { element: TextElement }): PropertiesTabDef {
+	return {
+		id: "styles",
+		label: "花字",
+		icon: <HugeiconsIcon icon={ColorsIcon} size={16} />,
+		content: ({ trackId }) => (
+			<TextStylesTab element={element} trackId={trackId} />
+		),
+	};
+}
+
 function buildTextAnimationTab({ element }: { element: TextElement }): PropertiesTabDef {
 	return {
 		id: "animation",
@@ -245,6 +281,7 @@ function getTextConfig({
 		defaultTab: "text",
 		tabs: [
 			buildTextTab({ element }),
+			buildTextStylesTab({ element }),
 			buildTextAnimationTab({ element }),
 			buildTransformTab({ element }),
 			buildBlendingTab({ element }),
@@ -267,6 +304,7 @@ function getVideoConfig({
 			...(showAudioTab ? [buildAudioTab({ element })] : []),
 			buildSpeedTab({ element }),
 			buildBlendingTab({ element }),
+			buildCutoutTab({ element }),
 			buildMasksTab({ element }),
 			buildClipEffectsTab({ element }),
 		],
@@ -283,6 +321,7 @@ function getImageConfig({
 		tabs: [
 			buildTransformTab({ element }),
 			buildBlendingTab({ element }),
+			buildCutoutTab({ element }),
 			buildMasksTab({ element }),
 			buildClipEffectsTab({ element }),
 		],
@@ -299,6 +338,7 @@ function getStickerConfig({
 		tabs: [
 			buildTransformTab({ element }),
 			buildBlendingTab({ element }),
+			buildCutoutTab({ element }),
 			buildClipEffectsTab({ element }),
 		],
 	};
@@ -315,6 +355,7 @@ function getGraphicConfig({
 			buildGraphicTab({ element }),
 			buildTransformTab({ element }),
 			buildBlendingTab({ element }),
+			buildCutoutTab({ element }),
 			buildMasksTab({ element }),
 			buildClipEffectsTab({ element }),
 		],

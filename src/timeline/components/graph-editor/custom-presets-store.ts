@@ -27,6 +27,9 @@ function isValidPresetArray(value: unknown): value is EasingPreset[] {
 }
 
 function readFromStorage(): EasingPreset[] {
+	if (typeof window === "undefined" || typeof localStorage === "undefined") {
+		return [];
+	}
 	try {
 		const raw = localStorage.getItem(STORAGE_KEY);
 		if (!raw) return [];
@@ -39,7 +42,14 @@ function readFromStorage(): EasingPreset[] {
 }
 
 function writeToStorage({ presets }: { presets: EasingPreset[] }): void {
-	localStorage.setItem(STORAGE_KEY, JSON.stringify(presets));
+	if (typeof window === "undefined" || typeof localStorage === "undefined") {
+		return;
+	}
+	try {
+		localStorage.setItem(STORAGE_KEY, JSON.stringify(presets));
+	} catch {
+		// Silently recover
+	}
 }
 
 function getSnapshot(): EasingPreset[] {

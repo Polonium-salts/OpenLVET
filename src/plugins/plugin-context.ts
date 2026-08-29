@@ -1,6 +1,7 @@
 import type { EditorCore } from "@/core";
 import { toast } from "sonner";
 import { effectsRegistry } from "@/effects";
+import { transitionsRegistry } from "@/transitions/registry";
 import type {
 	PluginActionDefinition,
 	PluginAssetTabDefinition,
@@ -8,11 +9,17 @@ import type {
 	PluginEventListener,
 	PluginHeaderItemDefinition,
 	PluginManifest,
+	PluginPropertiesTabDefinition,
+	PluginToolbarItemDefinition,
 } from "./types";
 import { usePluginStore } from "./plugin-store";
+import { useAssetsPanelStore } from "@/components/editor/panels/assets/assets-panel-store";
 import type { EffectDefinition } from "@/effects/types";
 import type { TransitionDefinition } from "@/transitions/types";
 import type { PreviewOverlaySourceResult } from "@/preview/overlays";
+import { stockStorage } from "@/stock/stock-storage";
+import { generateUUID } from "@/utils/id";
+import type { StockItem } from "@/stock/types";
 
 // Global event bus for plugin system
 class PluginEventBus {
@@ -118,10 +125,21 @@ export function createPluginContext({
 
 		transitions: {
 			registerTransition: (definition: TransitionDefinition) => {
-				// Transitions can be dynamically registered
-				const unregister = () => {};
+				transitionsRegistry.register({
+					...definition,
+					isPlugin: true,
+					sourceType: "plugin",
+					pluginId: manifest.id,
+					pluginName: manifest.name,
+				});
+				const unregister = () => {
+					transitionsRegistry.unregister(definition.id);
+				};
 				addDisposable(unregister);
 				return unregister;
+			},
+			unregisterTransition: (id: string) => {
+				transitionsRegistry.unregister(id);
 			},
 		},
 
@@ -136,6 +154,9 @@ export function createPluginContext({
 			},
 			unregisterAssetTab: (id: string) => {
 				usePluginStore.getState().unregisterDynamicTab(id);
+			},
+			setActiveAssetTab: (id: string) => {
+				useAssetsPanelStore.getState().setActiveTab(id);
 			},
 		},
 
@@ -210,6 +231,9 @@ export function createPluginContext({
 
 		storage: {
 			get: <T = unknown>(key: string, defaultValue?: T): T => {
+				if (typeof window === "undefined" || typeof localStorage === "undefined") {
+					return defaultValue as T;
+				}
 				try {
 					const raw = localStorage.getItem(`openlvet:plugin:${manifest.id}:${key}`);
 					return raw !== null ? JSON.parse(raw) : (defaultValue as T);
@@ -218,6 +242,9 @@ export function createPluginContext({
 				}
 			},
 			set: <T = unknown>(key: string, value: T): void => {
+				if (typeof window === "undefined" || typeof localStorage === "undefined") {
+					return;
+				}
 				try {
 					localStorage.setItem(
 						`openlvet:plugin:${manifest.id}:${key}`,
@@ -228,6 +255,9 @@ export function createPluginContext({
 				}
 			},
 			delete: (key: string): void => {
+				if (typeof window === "undefined" || typeof localStorage === "undefined") {
+					return;
+				}
 				try {
 					localStorage.removeItem(`openlvet:plugin:${manifest.id}:${key}`);
 				} catch (e) {
@@ -235,6 +265,9 @@ export function createPluginContext({
 				}
 			},
 			clear: (): void => {
+				if (typeof window === "undefined" || typeof localStorage === "undefined") {
+					return;
+				}
 				try {
 					const prefix = `openlvet:plugin:${manifest.id}:`;
 					Object.keys(localStorage)
@@ -264,6 +297,75 @@ export function createPluginContext({
 				};
 				addDisposable(unregister);
 				return unregister;
+			},
+		},
+
+		stock: {
+			addStockItem: async (param) => {
+				const id = generateUUID();
+				const now = new Date().toISOString();
+				let file: File;
+
+				if (param.file) {
+					file = param.file;
+				} else if (param.blob) {
+					const ext =
+						param.type === "video"
+							? "mp4"
+							: param.type === "audio"
+								? "mp3"
+								: "jpg";
+					file = new File([param.blob], `${param.name || "download"}.${ext}`, {
+						type: param.blob.type || (param.type === "video" ? "video/mp4" : param.type === "audio" ? "audio/mpeg" : "image/jpeg"),
+					});
+				} else if (param.url) {
+					const res = await fetch(param.url);
+					const blob = await res.blob();
+					const ext =
+						param.type === "video"
+							? "mp4"
+							: param.type === "audio"
+								? "mp3"
+								: "jpg";
+					file = new File([blob], `${param.name || "download"}.${ext}`, {
+						type: blob.type || (param.type === "video" ? "video/mp4" : param.type === "audio" ? "audio/mpeg" : "image/jpeg"),
+					});
+				} else {
+					throw new Error("必须提供 file, blob 或 url");
+				}
+
+				const stockItem: StockItem = {
+					id,
+					name: param.name || "Pexels 素材",
+					type: param.type,
+					tags: param.tags || ["pexels", "stock"],
+					file,
+					url: URL.createObjectURL(file),
+					thumbnailUrl: param.thumbnailUrl,
+					duration: param.duration,
+					width: param.width,
+					height: param.height,
+					fps: param.fps,
+					size: file.size,
+					isFavorite: false,
+					createdAt: now,
+					updatedAt: now,
+				};
+
+				await stockStorage.saveStockItem(stockItem);
+				try {
+					if (typeof window !== "undefined") {
+						const { useStockStore } = await import("@/stock/stock-store");
+						useStockStore.setState((prev) => ({
+							items: [stockItem, ...prev.items.filter((i) => i.id !== id)],
+						}));
+					}
+				} catch {}
+
+				return { id: stockItem.id, name: stockItem.name };
+			},
+			getStockItems: async () => {
+				return await stockStorage.loadAllStockItems();
 			},
 		},
 

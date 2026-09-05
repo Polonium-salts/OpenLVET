@@ -31,6 +31,7 @@ export interface PluginConfigFieldSchema {
 	label: string;
 	description?: string;
 	type: PluginConfigFieldType;
+	group?: string;
 	default?: unknown;
 	min?: number;
 	max?: number;
@@ -63,6 +64,7 @@ export interface PluginAssetTabDefinition {
 	label: string;
 	icon?: ReactNode | string;
 	order?: number;
+	pluginId?: string;
 	render: (props: { plugin: PluginManifest }) => ReactNode;
 }
 
@@ -228,6 +230,10 @@ export interface PluginContext {
 
 	// Utility to register disposable cleanup handlers
 	addDisposable: (disposable: () => void) => void;
+
+	// In-memory or attached stock library items
+	stockLibrary?: any;
+	[key: string]: any;
 }
 
 export interface PluginModule {

@@ -8,4 +8,5 @@ export * from "./installers/git-installer";
 export * from "./components/plugin-center-dialog";
 export * from "./components/plugin-settings-dialog";
 export * from "./components/plugin-header-items";
+export * from "./components/plugin-panel-container";
 export * from "./components/plugins-view";

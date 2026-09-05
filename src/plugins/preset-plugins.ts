@@ -1,4 +1,8 @@
 import type { InstalledPluginRecord, PluginManifest } from "./types";
+import {
+  CUSTOM_BG_GLASS_MANIFEST,
+  CUSTOM_BG_GLASS_SOURCE,
+} from "./builtin/custom-bg-glass";
 
 export const PEXELS_PLUGIN_MANIFEST: PluginManifest = {
   "id": "pexels-stock-hub",
@@ -23,6 +27,7 @@ export const PEXELS_PLUGIN_MANIFEST: PluginManifest = {
       "label": "Pexels API Key (可选)",
       "description": "输入您的 Pexels API Key（在 pexels.com/api 免费获取）。留空则使用内置精选素材或后端代理接口。",
       "type": "string",
+      "group": "账户与凭据",
       "placeholder": "例如: 563492ad6f91700001000001...",
       "default": ""
     },
@@ -31,6 +36,7 @@ export const PEXELS_PLUGIN_MANIFEST: PluginManifest = {
       "label": "默认搜索画幅方向",
       "description": "快速按素材画幅方向过滤",
       "type": "select",
+      "group": "检索与画质偏好",
       "default": "all",
       "options": [
         {
@@ -56,6 +62,7 @@ export const PEXELS_PLUGIN_MANIFEST: PluginManifest = {
       "label": "默认视频画质偏好",
       "description": "下载时优先选择的清晰度规格",
       "type": "select",
+      "group": "检索与画质偏好",
       "default": "hd",
       "options": [
         {
@@ -77,6 +84,7 @@ export const PEXELS_PLUGIN_MANIFEST: PluginManifest = {
       "label": "下载到统一素材库时同步导入当前工程",
       "description": "开启后，下载的素材除存入统一素材库外，会自动添加到当前工程资产列表中",
       "type": "boolean",
+      "group": "剪辑工程协同",
       "default": true
     }
   ],
@@ -102,6 +110,16 @@ export function getPresetPlugins(): Record<string, InstalledPluginRecord> {
       sourceType: "builtin",
       rawSource: PEXELS_PLUGIN_SOURCE,
       readme: PEXELS_PLUGIN_MANIFEST.readme,
+    },
+    "custom-bg-glass": {
+      manifest: CUSTOM_BG_GLASS_MANIFEST,
+      enabled: true,
+      config: CUSTOM_BG_GLASS_MANIFEST.defaultConfig || {},
+      installedAt: 1700000000000,
+      updatedAt: 1700000000000,
+      sourceType: "builtin",
+      rawSource: CUSTOM_BG_GLASS_SOURCE,
+      readme: CUSTOM_BG_GLASS_MANIFEST.readme,
     },
   };
 }

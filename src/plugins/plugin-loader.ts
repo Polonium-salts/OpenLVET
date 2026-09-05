@@ -1,6 +1,11 @@
 import * as React from "react";
 import type { PluginManifest, PluginModule } from "./types";
 
+// Ensure global window.React is available for dynamic plugins in Next.js browser environment
+if (typeof window !== "undefined") {
+	(window as unknown as { React: typeof React }).React = React;
+}
+
 /**
  * Safely evaluates a plugin script in the browser context and extracts the PluginModule.
  */
@@ -8,6 +13,10 @@ export function evaluatePluginCode(
 	sourceCode: string,
 	fallbackManifest?: PluginManifest,
 ): PluginModule {
+	if (typeof window !== "undefined") {
+		(window as unknown as { React: typeof React }).React = React;
+	}
+
 	let definedPlugin: PluginModule | null = null;
 
 	const moduleObj = { exports: {} as Record<string, unknown> };
@@ -25,6 +34,10 @@ export function evaluatePluginCode(
 		definePlugin,
 		OpenLVET: {
 			definePlugin,
+		},
+		require: (modName: string) => {
+			if (modName === "react") return React;
+			throw new Error(`模块 "${modName}" 不支持在插件沙箱环境中直接 require`);
 		},
 		document: typeof document !== "undefined" ? document : undefined,
 		window: typeof window !== "undefined" ? window : undefined,

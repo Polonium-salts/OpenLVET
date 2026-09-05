@@ -23,6 +23,7 @@ export class PluginManager {
 	private editor: EditorCore | null = null;
 	private activeControllers = new Map<string, PluginContextController>();
 	private pluginModules = new Map<string, PluginModule>();
+	private memoryRecords: Record<string, InstalledPluginRecord> = {};
 	private initialized = false;
 
 	private constructor() {}
@@ -45,10 +46,23 @@ export class PluginManager {
 		this.editor = editor;
 		this.initialized = true;
 
-		// 1. Load stored records from localStorage
+		// 1. In SSR / server context, seed memory records and skip client activation
+		if (typeof window === "undefined") {
+			try {
+				const presetPlugins = getPresetPlugins();
+				for (const [id, preset] of Object.entries(presetPlugins)) {
+					this.memoryRecords[id] = preset;
+				}
+			} catch (e) {
+				console.warn("Failed to load preset plugins in SSR:", e);
+			}
+			return;
+		}
+
+		// 2. Load stored records from localStorage & merge with memory
 		const storedRecords = this.loadStoredRecords();
 
-		// 2. Seed official preset plugins (e.g. Pexels Stock Hub) if not present
+		// 3. Seed official preset plugins (e.g. Pexels Stock Hub) if not present
 		try {
 			const presetPlugins = getPresetPlugins();
 			for (const [id, preset] of Object.entries(presetPlugins)) {
@@ -67,7 +81,7 @@ export class PluginManager {
 			console.warn("Failed to load preset plugins:", e);
 		}
 
-		// 2. Load and evaluate custom plugins stored with source code
+		// 4. Load and evaluate custom plugins stored with source code
 		for (const record of Object.values(storedRecords)) {
 			const sourceCode = record.rawSource || record.manifest.sourceCode;
 			if (sourceCode) {
@@ -87,7 +101,7 @@ export class PluginManager {
 		this.saveStoredRecords(storedRecords);
 		usePluginStore.getState().setInstalledPlugins(storedRecords);
 
-		// 3. Activate enabled plugins
+		// 5. Activate enabled plugins
 		for (const [id, record] of Object.entries(storedRecords)) {
 			if (record.enabled) {
 				this.activatePlugin(id).catch((err) => {
@@ -114,16 +128,21 @@ export class PluginManager {
 			return;
 		}
 
+		if (typeof window === "undefined") {
+			return;
+		}
+
 		if (this.activeControllers.has(pluginId)) {
 			return; // Already active
 		}
 
 		const mod = this.pluginModules.get(pluginId);
 		const records = this.loadStoredRecords();
-		const record = records[pluginId];
+		const record = this.memoryRecords[pluginId] || records[pluginId];
 
 		if (!mod || !record) {
-			throw new Error(`Plugin not found: ${pluginId}`);
+			console.warn(`Plugin ${pluginId} not found in modules or records, skipping activation`);
+			return;
 		}
 
 		try {
@@ -379,19 +398,45 @@ export class PluginManager {
 		return packPluginToZip(record.manifest, sourceCode);
 	}
 
+	/**
+	 * Retrieve a plugin record by ID from memory, storage, or preset plugins.
+	 */
+	getPluginRecord(pluginId: string): InstalledPluginRecord | undefined {
+		const records = this.loadStoredRecords();
+		if (records[pluginId]) return records[pluginId];
+		const found = Object.values(records).find(
+			(r) =>
+				r.manifest.id === pluginId ||
+				r.manifest.id.toLowerCase() === pluginId.toLowerCase(),
+		);
+		if (found) return found;
+		const presets = getPresetPlugins();
+		return (
+			presets[pluginId] ||
+			Object.values(presets).find(
+				(p) =>
+					p.manifest.id === pluginId ||
+					p.manifest.id.toLowerCase() === pluginId.toLowerCase(),
+			)
+		);
+	}
+
 	private loadStoredRecords(): Record<string, InstalledPluginRecord> {
 		if (typeof window === "undefined" || typeof localStorage === "undefined") {
-			return {};
+			return { ...this.memoryRecords };
 		}
 		try {
 			const raw = localStorage.getItem(STORAGE_KEY);
-			return raw ? JSON.parse(raw) : {};
+			const parsed = raw ? JSON.parse(raw) : {};
+			this.memoryRecords = { ...this.memoryRecords, ...parsed };
+			return { ...this.memoryRecords };
 		} catch {
-			return {};
+			return { ...this.memoryRecords };
 		}
 	}
 
 	private saveStoredRecords(records: Record<string, InstalledPluginRecord>): void {
+		this.memoryRecords = { ...records };
 		if (typeof window === "undefined" || typeof localStorage === "undefined") {
 			return;
 		}

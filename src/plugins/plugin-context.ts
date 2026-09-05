@@ -145,7 +145,10 @@ export function createPluginContext({
 
 		panels: {
 			registerAssetTab: (tab: PluginAssetTabDefinition) => {
-				usePluginStore.getState().registerDynamicTab(tab);
+				usePluginStore.getState().registerDynamicTab({
+					pluginId: manifest.id,
+					...tab,
+				});
 				const unregister = () => {
 					usePluginStore.getState().unregisterDynamicTab(tab.id);
 				};

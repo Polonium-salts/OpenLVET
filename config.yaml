@@ -1,0 +1,72 @@
+# ==============================================================================
+# OpenLVET Multi-Environment Configuration
+# ==============================================================================
+
+# Common Default Configuration
+default:
+  version: "1.0.0"
+  server:
+    port: 3000
+    host: "0.0.0.0"
+    siteUrl: "http://localhost:3000"
+    apiPrefix: "/api/v1"
+    corsEnabled: true
+  editor:
+    defaultFps: 30
+    defaultWidth: 1920
+    defaultHeight: 1080
+    defaultAspectRatio: "16:9"
+    maxUndoStack: 100
+    autoSaveIntervalMs: 2000
+    snappingTolerancePx: 10
+    magneticSnapping: true
+    rippleEditingDefault: false
+  storage:
+    persistence: "opfs"
+    autoPersistPrompt: true
+    maxProjectSizeMb: 2048
+    quotaWarningThresholdPercent: 80
+  rendering:
+    concurrency: 2
+    hardwareAcceleration: true
+    preferredCodec: "auto"
+    defaultFormat: "mp4"
+    maxExportDurationSec: 3600
+  plugins:
+    enabled: true
+    autoSeedBuiltin: true
+    allowThirdPartyGit: true
+    allowedHosts:
+      - "github.com"
+      - "api.pexels.com"
+  logging:
+    level: "INFO"
+    enableConsole: true
+    enableBuffer: true
+    bufferCapacity: 1000
+
+# Development Environment Overrides
+development:
+  logging:
+    level: "DEBUG"
+    bufferCapacity: 2000
+  editor:
+    autoSaveIntervalMs: 1500
+
+# Production Environment Overrides
+production:
+  logging:
+    level: "WARN"
+    enableConsole: true
+    bufferCapacity: 500
+  rendering:
+    concurrency: 4
+    hardwareAcceleration: true
+
+# Test Environment Overrides
+test:
+  logging:
+    level: "SILENT"
+    enableConsole: false
+  storage:
+    persistence: "memory"

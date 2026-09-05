@@ -1,0 +1,36 @@
+{
+  "$schema": "https://openlvet.app/schema/config.v1.json",
+  "version": "1.0.0",
+  "env": "development",
+  "server": {
+    "port": 3000,
+    "siteUrl": "http://localhost:3000",
+    "apiPrefix": "/api/v1"
+  },
+  "editor": {
+    "defaultFps": 30,
+    "defaultWidth": 1920,
+    "defaultHeight": 1080,
+    "defaultAspectRatio": "16:9",
+    "magneticSnapping": true,
+    "autoSaveIntervalMs": 2000
+  },
+  "storage": {
+    "persistence": "opfs",
+    "maxProjectSizeMb": 2048
+  },
+  "rendering": {
+    "concurrency": 2,
+    "hardwareAcceleration": true,
+    "defaultFormat": "mp4"
+  },
+  "plugins": {
+    "enabled": true,
+    "autoSeedBuiltin": true
+  },
+  "logging": {
+    "level": "INFO",
+    "enableBuffer": true,
+    "bufferCapacity": 1000
+  }
+}
